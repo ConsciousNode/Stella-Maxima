@@ -1725,14 +1725,20 @@
         bio.foodWebLinks.push({ from: parent.id, to: child.id, type: trophic });
 
         // Check intelligence crossover for Civilization emergence
-        if (!planet.civilization && child.multicellular && (child.intelligence >= 0.42 || (bio.phyloTree.length >= 6 && t >= 2.6))) {
-          child.intelligence = Math.max(0.55, child.intelligence);
+        // AUDIT FIX (Kehai, 2026-11-10): sapience must be earned. The delivered rule also founded a
+        // civilization once a world had 6+ species past 2.6 Gyr, then raised the founder's
+        // intelligence to 0.55 so it looked earned (91% of civilizations came from that path).
+        if (!planet.civilization && child.multicellular && child.intelligence >= 0.42) {
           this._foundCivilization(planet, child, t, rng);
         }
       }
 
-      // Natural asteroid mass extinction (at least one natural recovery during universe history around t ~ 2.2 Gyr on primary world)
-      if (bio.massExtinctions === 0 && t >= 2.1 && t <= 2.5 && bio.phyloTree.length >= 3) {
+      // Natural asteroid mass extinctions: a Poisson process, not a scripted beat.
+      // AUDIT FIX (Kehai, 2026-11-10): the delivered rule struck every world with 3+ species exactly
+      // once between 2.1 and 2.5 Gyr. Now each step rolls against BOLIDE_RATE_PER_GYR, so some
+      // worlds are never hit and some are hit repeatedly.
+      const BOLIDE_RATE_PER_GYR = 0.4;
+      if (bio.phyloTree.length >= 3 && rng.next() < 1 - Math.exp(-BOLIDE_RATE_PER_GYR * dtGyr)) {
         this._triggerMassExtinction(planet, 'Chicxulub-class bolide impact', 0.5);
       }
 
