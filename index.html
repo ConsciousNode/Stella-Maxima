@@ -1,0 +1,4311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stella Maxima — ConsciousNode SoftWorks (MIT)</title>
+  <style>
+    /* Zero-dependency offline utility & layout stylesheet */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background: #020617; color: #f8fafc;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      user-select: none; -webkit-font-smoothing: antialiased;
+    }
+    button, select, input {
+      font-family: inherit; font-size: inherit; color: inherit;
+      background: none; border: none; outline: none;
+    }
+    button { cursor: pointer; }
+    code, .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+
+    /* Layout shell */
+    .app-shell { display: flex; flex-direction: column; width: 100vw; height: 100vh; overflow: hidden; }
+    .top-bar {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: 0.5rem; padding: 0.45rem 0.85rem;
+      background: rgba(15, 23, 42, 0.94); border-bottom: 1px solid #1e293b; z-index: 20;
+    }
+    .main-area { display: flex; flex: 1; min-height: 0; position: relative; overflow: hidden; }
+    .viewport-wrap { position: relative; flex: 1; min-width: 0; height: 100%; background: #020617; overflow: hidden; }
+    #gl-canvas, #overlay-canvas {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block;
+    }
+    #overlay-canvas { z-index: 5; touch-action: none; }
+    .side-panel {
+      width: 390px; max-width: 44vw; height: 100%;
+      display: flex; flex-direction: column;
+      background: rgba(9, 14, 28, 0.96); border-left: 1px solid #1e293b; z-index: 15;
+    }
+    .bottom-bar {
+      display: flex; flex-direction: column; gap: 0.35rem;
+      padding: 0.45rem 0.85rem; background: rgba(15, 23, 42, 0.95);
+      border-top: 1px solid #1e293b; z-index: 20;
+    }
+
+    /* Utility classes used by dynamic templates */
+    .flex { display: flex; }
+    .flex-1 { flex: 1 1 0%; }
+    .flex-wrap { flex-wrap: wrap; }
+    .items-center { align-items: center; }
+    .justify-between { justify-content: space-between; }
+    .gap-1 { gap: 0.25rem; }
+    .gap-1\.5 { gap: 0.375rem; }
+    .gap-2 { gap: 0.5rem; }
+    .gap-3 { gap: 0.75rem; }
+    .grid { display: grid; }
+    .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .space-y-1 > * + * { margin-top: 0.25rem; }
+    .space-y-1\.5 > * + * { margin-top: 0.375rem; }
+    .space-y-2 > * + * { margin-top: 0.5rem; }
+    .space-y-2\.5 > * + * { margin-top: 0.625rem; }
+    .space-y-3 > * + * { margin-top: 0.75rem; }
+    .p-1\.5 { padding: 0.375rem; }
+    .p-2 { padding: 0.5rem; }
+    .p-2\.5 { padding: 0.625rem; }
+    .p-3 { padding: 0.75rem; }
+    .px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+    .px-2\.5 { padding-left: 0.625rem; padding-right: 0.625rem; }
+    .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+    .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+    .py-1\.5 { padding-top: 0.375rem; padding-bottom: 0.375rem; }
+    .pr-1 { padding-right: 0.25rem; }
+    .mb-1 { margin-bottom: 0.25rem; }
+    .mb-1\.5 { margin-bottom: 0.375rem; }
+    .mb-2 { margin-bottom: 0.5rem; }
+    .mt-1\.5 { margin-top: 0.375rem; }
+    .ml-1 { margin-left: 0.25rem; }
+    .-ml-1\.5 { margin-left: -0.375rem; }
+    .-mt-1\.5 { margin-top: -0.375rem; }
+    .w-full { width: 100%; }
+    .w-3 { width: 0.75rem; }
+    .h-3 { height: 0.75rem; }
+    .h-1\.5 { height: 0.375rem; }
+    .h-full { height: 100%; }
+    .h-52 { height: 13rem; }
+    .max-h-48 { max-height: 12rem; }
+    .max-h-72 { max-height: 18rem; }
+    .max-h-80 { max-height: 20rem; }
+    .max-h-96 { max-height: 24rem; }
+    .overflow-hidden { overflow: hidden; }
+    .overflow-y-auto { overflow-y: auto; }
+    .relative { position: relative; }
+    .absolute { position: absolute; }
+    .top-1 { top: 0.25rem; }
+    .bottom-1 { bottom: 0.25rem; }
+    .left-2 { left: 0.5rem; }
+    .right-2 { right: 0.5rem; }
+    .rounded { border-radius: 0.375rem; }
+    .rounded-full { border-radius: 9999px; }
+    .border { border: 1px solid #334155; }
+    .border-b-2 { border-bottom-width: 2px; border-bottom-style: solid; }
+    .border-collapse { border-collapse: collapse; }
+    .border-slate-800 { border-color: #1e293b; }
+    .border-sky-500\/40 { border-color: rgba(14, 165, 233, 0.4); }
+    .border-emerald-500\/30 { border-color: rgba(16, 185, 129, 0.3); }
+    .border-rose-900\/40 { border-color: rgba(136, 19, 55, 0.4); }
+    .border-amber-400 { border-color: #fbbf24; }
+    .border-white { border-color: #ffffff; }
+    .bg-slate-950 { background-color: #020617; }
+    .bg-slate-950\/60 { background-color: rgba(2, 6, 23, 0.6); }
+    .bg-slate-900 { background-color: #0f172a; }
+    .bg-slate-900\/90 { background-color: rgba(15, 23, 42, 0.9); }
+    .bg-slate-800 { background-color: #1e293b; }
+    .bg-sky-950\/70 { background-color: rgba(8, 47, 73, 0.7); }
+    .bg-sky-500 { background-color: #0ea5e9; }
+    .bg-amber-500 { background-color: #f59e0b; }
+    .bg-amber-400 { background-color: #fbbf24; }
+    .bg-emerald-600 { background-color: #059669; }
+    .bg-emerald-500 { background-color: #10b981; }
+    .bg-rose-600 { background-color: #e11d48; }
+    .bg-rose-500 { background-color: #f43f5e; }
+    .hover\:bg-slate-800:hover { background-color: #1e293b; }
+    .hover\:bg-slate-700:hover { background-color: #334155; }
+    .hover\:bg-emerald-500:hover { background-color: #10b981; }
+    .hover\:bg-rose-500:hover { background-color: #f43f5e; }
+    .text-xs { font-size: 0.75rem; line-height: 1.1rem; }
+    .text-\[11px\] { font-size: 11px; line-height: 1.3; }
+    .text-\[10px\] { font-size: 10px; line-height: 1.2; }
+    .font-semibold { font-weight: 600; }
+    .italic { font-style: italic; }
+    .leading-relaxed { line-height: 1.55; }
+    .text-left { text-align: left; }
+    .text-white { color: #ffffff; }
+    .text-slate-950 { color: #020617; }
+    .text-slate-200 { color: #e2e8f0; }
+    .text-slate-300 { color: #cbd5e1; }
+    .text-slate-400 { color: #94a3b8; }
+    .text-slate-500 { color: #64748b; }
+    .text-sky-200 { color: #bae6fd; }
+    .text-sky-300 { color: #7dd3fc; }
+    .text-sky-400 { color: #38bdf8; }
+    .text-cyan-300 { color: #67e8f9; }
+    .text-amber-200 { color: #fde68a; }
+    .text-amber-300 { color: #fcd34d; }
+    .text-emerald-300 { color: #6ee7b7; }
+    .text-emerald-400 { color: #34d399; }
+    .text-rose-300 { color: #fda4af; }
+    .text-rose-400 { color: #fb7185; }
+    .text-purple-300 { color: #d8b4fe; }
+    .hover\:text-slate-200:hover { color: #e2e8f0; }
+    .shadow { box-shadow: 0 2px 8px rgba(0,0,0,0.45); }
+    .transition { transition: all 0.18s ease; }
+    .opacity-0 { opacity: 0; pointer-events: none; }
+    .hidden { display: none !important; }
+
+    /* Custom UI widgets */
+    input[type="range"] {
+      -webkit-appearance: none; appearance: none;
+      height: 6px; background: #1e293b; border-radius: 4px; cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #38bdf8; border: 2px solid #f8fafc;
+    }
+    .miracle-pill {
+      padding: 0.25rem 0.5rem; border-radius: 0.35rem; font-size: 11px;
+      background: #1e293b; color: #e2e8f0; border: 1px solid #334155;
+      transition: all 0.15s;
+    }
+    .miracle-pill:hover { background: #334155; border-color: #fbbf24; color: #fef08a; }
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(2, 6, 23, 0.82);
+      display: flex; align-items: center; justify-content: center; z-index: 50;
+    }
+    .modal-card {
+      width: 540px; max-width: 94vw; max-height: 90vh; overflow-y: auto;
+      background: #0f172a; border: 1px solid #334155; border-radius: 0.6rem;
+      padding: 1.1rem; box-shadow: 0 18px 48px rgba(0,0,0,0.75);
+    }
+    @media (max-width: 860px) {
+      .main-area { flex-direction: column; }
+      .side-panel { width: 100%; max-width: 100%; height: 44%; border-left: none; border-top: 1px solid #1e293b; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- TOP TELEMETRY & GOD STATUS BAR -->
+    <header class="top-bar text-xs">
+      <div class="flex items-center gap-2">
+        <span style="font-weight:800; letter-spacing:0.04em; color:#fde047;">✦ STELLA MAXIMA</span>
+        <span class="text-slate-400 text-[11px]">ConsciousNode SoftWorks</span>
+        <button id="btn-open-creation" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-800 font-semibold">⚛ Creation Dials</button>
+        <button id="btn-mode-toggle" class="px-3 py-1.5 rounded text-xs font-semibold bg-slate-800 text-sky-300">👁️ Contemplative Mode</button>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3 font-mono text-[11px]">
+        <div>Cosmic Age: <b id="hud-time" class="text-white">0.20 Gyr</b></div>
+        <div>Heat Death: <b id="hud-heatdeath" class="text-rose-400">22.00 Gyr</b></div>
+        <div title="Every miracle spends cosmic negentropy and brings Heat Death closer">Entropy Cost ΔS: <b id="hud-entropy" class="text-amber-300">+0.00 Gyr</b></div>
+        <div>Belief Power: <b id="hud-belief" class="text-purple-300">60</b>✦</div>
+        <div>Realm Alignment: <b id="hud-alignment" class="text-emerald-300">Neutral (0.00)</b></div>
+        <div id="hud-fps" class="text-sky-400">60 FPS</div>
+      </div>
+
+      <div class="flex items-center gap-1.5">
+        <select id="select-quality" class="px-2 py-1 rounded bg-slate-800 text-slate-200 border border-slate-800" title="Hardware quality scaling"><option value="1.0" selected>Quality: High</option><option value="0.75">Quality: Balanced</option><option value="0.5">Quality: Fast</option></select>
+        <button id="btn-audio-toggle" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200">🔊 Audio On</button>
+        <button id="btn-share-string" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-sky-300" title="Copy tiny seed+constants+actionLog string">🔗 Share</button>
+        <button id="btn-export-cartridge" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-emerald-300" title="Download standalone HTML universe cartridge">💾 Cartridge</button>
+      </div>
+    </header>
+
+    <!-- MAIN VIEWPORT + RIGHT INSPECTOR -->
+    <div class="main-area">
+      <div class="viewport-wrap">
+        <canvas id="gl-canvas"></canvas>
+        <canvas id="overlay-canvas"></canvas>
+
+        <!-- FLOATING ERA & SCALE BANNER -->
+        <div style="position:absolute; top:10px; left:12px; z-index:10; pointer-events:none; background:rgba(2,6,23,0.75); padding:6px 10px; border-radius:6px; border:1px solid #1e293b;">
+          <div class="text-[11px] text-slate-400">ERA: <span id="hud-era" class="text-amber-300 font-semibold">Cosmic Dawn</span></div>
+          <div class="text-xs text-white font-semibold">SCALE: <span id="hud-scale-name" class="text-sky-300">Cosmic Web (32 Mpc)</span></div>
+        </div>
+
+        <!-- FLOATING TOAST FEEDBACK -->
+        <div id="toast-banner" class="opacity-0 transition" style="position:absolute; bottom:14px; left:50%; transform:translateX(-50%); z-index:12; background:rgba(15,23,42,0.92); border:1px solid #fbbf24; color:#fef08a; padding:6px 14px; border-radius:999px; font-size:12px; font-weight:600;">
+          Ready
+        </div>
+      </div>
+
+      <!-- RIGHT DOCKED MULTI-INSPECTOR & GOD MIRACLE DECK -->
+      <aside class="side-panel">
+        <!-- GOD HAND & GESTURE MIRACLES BAR -->
+        <div class="p-2.5 border-slate-800" style="border-bottom:1px solid #1e293b; background:rgba(15,23,42,0.6);">
+          <div class="flex justify-between items-center mb-1.5 text-[11px]">
+            <span class="font-semibold text-amber-300">🖐️ The Hand & Gesture Miracles (Draw on Canvas or Click)</span>
+          </div>
+          <div class="flex flex-wrap gap-1 mb-2">
+            <button data-hand-tool="gesture" class="px-2 py-1 rounded text-xs font-semibold bg-amber-400 text-slate-950">✍️ Draw Gesture</button>
+            <button data-hand-tool="stroke" class="px-2 py-1 rounded text-xs bg-slate-800 text-slate-300">✨ Stroke Creature</button>
+            <button data-hand-tool="slap" class="px-2 py-1 rounded text-xs bg-slate-800 text-slate-300">⚡ Slap Creature</button>
+            <button data-hand-tool="cradle" class="px-2 py-1 rounded text-xs bg-slate-800 text-slate-300">🤲 Cradle World</button>
+            <button data-hand-tool="asteroid" class="px-2 py-1 rounded text-xs bg-slate-800 text-slate-300">☄️ Throw Asteroid</button>
+          </div>
+          <div class="flex flex-wrap gap-1">
+            <button data-cast-miracle="ignite_star" class="miracle-pill" title="Gesture: Spiral | Cost: 15✦ | ΔS: +0.18 Gyr">🌀 Ignite Star</button>
+            <button data-cast-miracle="push_comet" class="miracle-pill" title="Gesture: Slash / | Cost: 12✦ | ΔS: +0.14 Gyr">☄️ Comet</button>
+            <button data-cast-miracle="rain" class="miracle-pill" title="Gesture: Wave ~ | Cost: 8✦ | ΔS: +0.06 Gyr">🌧️ Rain</button>
+            <button data-cast-miracle="fire" class="miracle-pill" title="Gesture: V-Flame | Cost: 14✦ | ΔS: +0.16 Gyr">🔥 Fire</button>
+            <button data-cast-miracle="heal" class="miracle-pill" title="Gesture: Circle ○ | Cost: 10✦ | ΔS: +0.08 Gyr">⭕ Heal</button>
+            <button data-cast-miracle="seed_protocell" class="miracle-pill" title="Gesture: Infinity ∞ | Cost: 25✦ | ΔS: +0.28 Gyr">🧬 Seed Life</button>
+            <button data-cast-miracle="inspire" class="miracle-pill" title="Gesture: Caret ^ | Cost: 20✦ | ΔS: +0.22 Gyr">💡 Inspire</button>
+            <button data-cast-miracle="smite" class="miracle-pill" title="Gesture: Zigzag ⚡ | Cost: 18✦ | ΔS: +0.24 Gyr">⚡ Smite</button>
+            <button data-cast-miracle="dyson_spark" class="miracle-pill" title="Gesture: Square □ | Cost: 40✦ | ΔS: +0.45 Gyr">🛰️ Dyson Ring</button>
+            <button data-cast-miracle="undo_heat_death" class="miracle-pill" title="Gesture: Hourglass ⏳ | Cost: 120✦ | ΔS: -4.50 Gyr">⏳ Negentropy</button>
+          </div>
+        </div>
+
+        <!-- PANEL NAVIGATION TABS -->
+        <div class="flex flex-wrap border-slate-800" style="border-bottom:1px solid #1e293b; background:#090d16;">
+          <button data-panel-tab="inspector" class="px-2.5 py-1.5 text-xs font-semibold border-b-2 border-amber-400 text-amber-300">Cosmos</button>
+          <button data-panel-tab="hr" class="px-2.5 py-1.5 text-xs text-slate-400">H-R</button>
+          <button data-panel-tab="phylo" class="px-2.5 py-1.5 text-xs text-slate-400">Life/Tree</button>
+          <button data-panel-tab="creature" class="px-2.5 py-1.5 text-xs text-slate-400">Creature</button>
+          <button data-panel-tab="branches" class="px-2.5 py-1.5 text-xs text-slate-400">Branches</button>
+          <button data-panel-tab="chronicle" class="px-2.5 py-1.5 text-xs text-slate-400">Chronicle</button>
+          <button data-panel-tab="howitworks" class="px-2.5 py-1.5 text-xs text-slate-400">Honesty</button>
+        </div>
+
+        <!-- PANEL CONTENT AREA -->
+        <div id="panel-content" class="p-3 flex-1 overflow-y-auto"></div>
+
+        <!-- PANEL FOOTER ACTIONS -->
+        <div class="p-2 border-slate-800 flex justify-between items-center text-[11px]" style="border-top:1px solid #1e293b;">
+          <button id="btn-export-chronicle" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200">📜 Export Chronicle (.txt)</button>
+          <span class="text-slate-500">Deterministic Pure Engine</span>
+        </div>
+      </aside>
+    </div>
+
+    <!-- BOTTOM CONTINUOUS SCALE LADDER & SCRUBBABLE TIMELINE BAR -->
+    <footer class="bottom-bar text-xs">
+      <!-- Scale Ladder Row -->
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-1.5">
+          <span class="text-slate-400 font-semibold">ZOOM LADDER:</span>
+          <button data-scale-idx="0" class="px-2 py-1 rounded text-xs">0. Singularity</button>
+          <button data-scale-idx="1" class="px-2 py-1 rounded text-xs">1. Cosmic Web</button>
+          <button data-scale-idx="2" class="px-2 py-1 rounded text-xs">2. Galaxy</button>
+          <button data-scale-idx="3" class="px-2 py-1 rounded text-xs">3. Nursery/H-R</button>
+          <button data-scale-idx="4" class="px-2 py-1 rounded text-xs">4. System</button>
+          <button data-scale-idx="5" class="px-2 py-1 rounded text-xs">5. Planet</button>
+          <button data-scale-idx="6" class="px-2 py-1 rounded text-xs">6. Biosphere</button>
+          <button data-scale-idx="7" class="px-2 py-1 rounded text-xs">7. Society</button>
+          <button data-scale-idx="8" class="px-2 py-1 rounded text-xs">8. Creature</button>
+        </div>
+        <div class="flex items-center gap-2" style="min-width:180px;">
+          <span class="text-[11px] text-slate-400">10²⁷m</span>
+          <input id="slider-zoom" type="range" min="0" max="8" step="0.05" value="1" class="w-full" />
+          <span class="text-[11px] text-slate-400">2m</span>
+        </div>
+      </div>
+
+      <!-- Scrubbable Deterministic Timeline Row -->
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="btn-play-pause" class="px-2.5 py-1 rounded bg-sky-500 text-slate-950 font-semibold">⏸ Pause</button>
+        <button id="btn-step-forward" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200">+0.4 Gyr</button>
+        <select id="select-speed" class="px-2 py-1 rounded bg-slate-800 text-slate-200 border border-slate-800">
+          <option value="0.1">0.1 Gyr/s</option>
+          <option value="0.25" selected>0.25 Gyr/s</option>
+          <option value="0.8">0.8 Gyr/s (Fast)</option>
+          <option value="2.0">2.0 Gyr/s (Epoch Warp)</option>
+        </select>
+        <span class="text-[11px] text-slate-400 font-mono">t=0</span>
+        <input id="slider-timeline" type="range" min="0" max="22" step="0.1" value="0.2" class="flex-1" title="Scrub timeline to rewind or fast-forward deterministically" />
+        <button id="btn-fork-timeline" class="px-2.5 py-1 rounded bg-amber-500 text-slate-950 font-semibold" title="Fork a timeline branch at this exact moment">🌿 Fork Timeline</button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- CREATION DIALS & PHYSICS PRESETS MODAL -->
+  <div id="modal-creation" class="modal-backdrop hidden">
+    <div class="modal-card space-y-3 text-xs">
+      <div class="flex justify-between items-center">
+        <h2 style="font-size:15px; font-weight:700; color:#fde047;">⚛ Before the Big Bang — Creation Constants</h2>
+        <button id="btn-close-creation" class="px-2 py-1 rounded bg-slate-800 text-slate-300">✕ Close</button>
+      </div>
+      <p class="text-slate-400">Tune the fundamental parameters of your cosmos. Honest physics regimes: bad constants produce real failures (Runaway Big Rip dispersion, Hyper-Gravity Big Crunch, or Carbon-Starved sterile worlds).</p>
+
+      <div class="space-y-2">
+        <div>
+          <label class="text-slate-300 font-semibold">Physics Preset:</label>
+          <select id="select-preset" class="w-full p-2 mt-1.5 rounded bg-slate-900 border border-slate-800 text-white">
+            <option value="default">Standard ΛCDM (Fertile Cosmos)</option>
+            <option value="hyper_fertile">Edenic Super-Web (Rapid Life & Minds)</option>
+            <option value="big_rip">Runaway Dark Energy (The Great Emptiness — No Stars)</option>
+            <option value="big_crunch">Hyper-Gravity Singularity (The Great Crunch)</option>
+            <option value="sterile_metal_poor">Carbon-Starved Cosmos (Stars without Life)</option>
+          </select>
+          <div id="preset-desc" class="text-[11px] text-sky-300 mt-1.5">Balanced cosmic constants matching our universe. Forms cosmic web, spiral galaxies, enriched rocky worlds, life, and civilizations.</div>
+        </div>
+
+        <div>
+          <label class="text-slate-300 font-semibold">Universe Seed:</label>
+          <input id="input-seed" type="text" value="STELLA-2026" class="w-full p-1.5 mt-1.5 rounded bg-slate-900 border border-slate-800 text-white font-mono" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="p-2 rounded bg-slate-900 border border-slate-800">
+            <div class="flex justify-between"><span>Gravity Strength (G)</span><b id="val-gravity">1.00</b></div>
+            <input id="dial-gravity" type="range" min="0.1" max="3.5" step="0.05" value="1.0" class="w-full mt-1.5" />
+          </div>
+          <div class="p-2 rounded bg-slate-900 border border-slate-800">
+            <div class="flex justify-between"><span>Expansion Rate (H₀/Λ)</span><b id="val-expansion">1.00</b></div>
+            <input id="dial-expansion" type="range" min="0.1" max="3.5" step="0.05" value="1.0" class="w-full mt-1.5" />
+          </div>
+          <div class="p-2 rounded bg-slate-900 border border-slate-800">
+            <div class="flex justify-between"><span>Primordial Lumpiness (σ₈)</span><b id="val-lumpiness">1.00</b></div>
+            <input id="dial-lumpiness" type="range" min="0.1" max="2.5" step="0.05" value="1.0" class="w-full mt-1.5" />
+          </div>
+          <div class="p-2 rounded bg-slate-900 border border-slate-800">
+            <div class="flex justify-between"><span>Dark Matter Fraction (Ω_dm)</span><b id="val-darkmatter">0.84</b></div>
+            <input id="dial-darkmatter" type="range" min="0.05" max="1.8" step="0.02" value="0.84" class="w-full mt-1.5" />
+          </div>
+          <div class="p-2 rounded bg-slate-900 border border-slate-800">
+            <div class="flex justify-between"><span>Chemistry Richness (α_chem)</span><b id="val-chemistry">1.00</b></div>
+            <input id="dial-chemistry" type="range" min="0.0" max="2.0" step="0.02" value="1.0" class="w-full mt-1.5" />
+          </div>
+          <div class="p-2 rounded bg-slate-900 border border-slate-800">
+            <div class="flex justify-between"><span>Star-Formation Eff. (ε_sfr)</span><b id="val-stareff">1.00</b></div>
+            <input id="dial-stareff" type="range" min="0.05" max="2.0" step="0.05" value="1.0" class="w-full mt-1.5" />
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button id="btn-ignite-big-bang" class="px-3 py-1.5 rounded bg-amber-500 text-slate-950 font-semibold">💥 Ignite Big Bang</button>
+      </div>
+    </div>
+  </div>
+
+  <script>window.__INITIAL_CARTRIDGE__ = null;</script>
+  <script id="stella-simulation-core">
+/* === STELLA_CORE_START === */
+(function (root) {
+  'use strict';
+
+  // ============================================================================
+  // 1. DETERMINISTIC PRNG, HASHING & HIERARCHICAL SEEDING
+  // ============================================================================
+
+  function fnv1a32(str) {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 0x01000193);
+    }
+    return h >>> 0;
+  }
+
+  function mixSeed(parentSeed, idStr) {
+    let h = (parentSeed >>> 0) ^ 0x9e3779b9;
+    const s = String(idStr);
+    for (let i = 0; i < s.length; i++) {
+      h = Math.imul(h ^ s.charCodeAt(i), 0x85ebca6b);
+      h ^= h >>> 13;
+    }
+    h = Math.imul(h ^ (h >>> 16), 0xc2b2ae35);
+    return (h ^ (h >>> 16)) >>> 0;
+  }
+
+  class PRNG {
+    constructor(seed) {
+      this.state = (typeof seed === 'string' ? fnv1a32(seed) : (seed >>> 0)) || 0x12345678;
+    }
+    nextU32() {
+      let t = (this.state += 0x6d2b79f5);
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0);
+    }
+    next() {
+      return this.nextU32() / 4294967296;
+    }
+    range(min, max) {
+      return min + this.next() * (max - min);
+    }
+    int(min, maxInclusive) {
+      return min + (this.nextU32() % (maxInclusive - min + 1));
+    }
+    gaussian(mean = 0, std = 1) {
+      const u1 = Math.max(1e-9, this.next());
+      const u2 = this.next();
+      const z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+      return mean + z0 * std;
+    }
+    pick(arr) {
+      if (!arr || !arr.length) return null;
+      return arr[this.int(0, arr.length - 1)];
+    }
+  }
+
+  // Deterministic float quantization for cross-platform hashing
+  function qf(val, digits = 5) {
+    if (!Number.isFinite(val)) return '0';
+    return Number(val).toFixed(digits);
+  }
+
+  // ============================================================================
+  // 2. CREATION CONSTANTS & PRESETS
+  // ============================================================================
+
+  const CREATION_PRESETS = {
+    default: {
+      name: 'Standard ΛCDM (Fertile Cosmos)',
+      gravity: 1.0,
+      expansion: 1.0,
+      lumpiness: 1.0,
+      darkMatter: 0.84,
+      chemistryRichness: 1.0,
+      starEfficiency: 1.0,
+      description: 'Balanced cosmic constants matching our universe. Forms cosmic web, spiral galaxies, enriched rocky worlds, life, and civilizations.'
+    },
+    hyper_fertile: {
+      name: 'Edenic Super-Web',
+      gravity: 1.15,
+      expansion: 0.9,
+      lumpiness: 1.35,
+      darkMatter: 0.9,
+      chemistryRichness: 1.6,
+      starEfficiency: 1.35,
+      description: 'Dense halos, rapid nucleosynthesis, and abundant prebiotic chemistry. Civilizations blossom across many worlds.'
+    },
+    big_rip: {
+      name: 'Runaway Dark Energy (The Great Emptiness)',
+      gravity: 0.28,
+      expansion: 2.8,
+      lumpiness: 0.35,
+      darkMatter: 0.2,
+      chemistryRichness: 0.8,
+      starEfficiency: 0.25,
+      description: 'Expansion overwhelms gravity before halos can virialize. Matter disperses into a cold, starless void.'
+    },
+    big_crunch: {
+      name: 'Hyper-Gravity Singularity (The Great Crunch)',
+      gravity: 2.9,
+      expansion: 0.25,
+      lumpiness: 1.8,
+      darkMatter: 1.5,
+      chemistryRichness: 0.5,
+      starEfficiency: 1.8,
+      description: 'Gravity halts expansion early; supermassive black holes swallow halos before universe recollapses in a fiery Big Crunch.'
+    },
+    sterile_metal_poor: {
+      name: 'Carbon-Starved Cosmos (Lifeless Stars)',
+      gravity: 1.0,
+      expansion: 1.0,
+      lumpiness: 1.0,
+      darkMatter: 0.84,
+      chemistryRichness: 0.04,
+      starEfficiency: 0.55,
+      description: 'Stars and gas giants form, but low nucleosynthesis and suppressed organic bond stability prevent self-replicating chemistry.'
+    }
+  };
+
+  // ============================================================================
+  // 3. SCALE LADDER DEFINITIONS
+  // ============================================================================
+
+  const SCALES = [
+    { id: 0, key: 'creation', name: 'Primordial Singularity', meters: 1e27, unit: '100 Gpc' },
+    { id: 1, key: 'web', name: 'Cosmic Web', meters: 1e24, unit: '32 Mpc' },
+    { id: 2, key: 'galaxy', name: 'Galactic Halo', meters: 1e21, unit: '32 kpc' },
+    { id: 3, key: 'cluster', name: 'Stellar Nursery & H-R Sector', meters: 1e18, unit: '32 pc' },
+    { id: 4, key: 'system', name: 'Planetary System', meters: 1e13, unit: '67 AU' },
+    { id: 5, key: 'planet', name: 'Planetary Globe', meters: 1e7, unit: '10,000 km' },
+    { id: 6, key: 'biosphere', name: 'Biosphere & Chemistry', meters: 1e4, unit: '10 km' },
+    { id: 7, key: 'civilization', name: 'Settlement & Society', meters: 1e2, unit: '100 m' },
+    { id: 8, key: 'creature', name: 'The Avatar Creature', meters: 2, unit: '2 m' }
+  ];
+
+  // ============================================================================
+  // 4. GESTURE RECOGNIZER ($1 / PROTRACTOR FROM SCRATCH)
+  // ============================================================================
+
+  const MIRACLE_DEFS = {
+    ignite_star: {
+      id: 'ignite_star',
+      name: 'Ignite Star',
+      gestureName: 'Spiral / Starburst',
+      costBelief: 15,
+      entropyCost: 0.18, // Gyr of cosmic lifespan lost
+      alignmentDelta: +0.08,
+      description: 'Compresses molecular gas or rejuvenates a dying star with fresh fusion fuel.',
+      benevolent: true
+    },
+    push_comet: {
+      id: 'push_comet',
+      name: 'Steer Comet',
+      gestureName: 'Slash / Vector Line',
+      costBelief: 12,
+      entropyCost: 0.14,
+      alignmentDelta: -0.06,
+      description: 'Hurls an icy volatile comet or asteroid toward the target body, reshaping crusts or triggering extinctions.',
+      benevolent: false
+    },
+    rain: {
+      id: 'rain',
+      name: 'Monsoon Blessing',
+      gestureName: 'Wave / Sinusoid',
+      costBelief: 8,
+      entropyCost: 0.06,
+      alignmentDelta: +0.10,
+      description: 'Seeds clouds and precipitates life-giving oceans across parched tectonic basins.',
+      benevolent: true
+    },
+    fire: {
+      id: 'fire',
+      name: 'Solar Tempest',
+      gestureName: 'Upward V / Flame',
+      costBelief: 14,
+      entropyCost: 0.16,
+      alignmentDelta: -0.14,
+      description: 'Unleashes a coronal mass ejection or volcanic firestorm, scorching biospheres.',
+      benevolent: false
+    },
+    heal: {
+      id: 'heal',
+      name: 'Harmonic Restoration',
+      gestureName: 'Circle / Halo',
+      costBelief: 10,
+      entropyCost: 0.08,
+      alignmentDelta: +0.15,
+      description: 'Mends wounded ecosystems, stabilizes planetary climate, and comforts civilizations.',
+      benevolent: true
+    },
+    seed_protocell: {
+      id: 'seed_protocell',
+      name: 'Seed Protocell',
+      gestureName: 'Infinity / Figure-8',
+      costBelief: 25,
+      entropyCost: 0.28,
+      alignmentDelta: +0.18,
+      description: 'Injects chiral autocatalytic ribozymes into tidal pools, tipping chemistry into life.',
+      benevolent: true
+    },
+    inspire: {
+      id: 'inspire',
+      name: 'Epiphany',
+      gestureName: 'Upward Arrow / Caret',
+      costBelief: 20,
+      entropyCost: 0.22,
+      alignmentDelta: +0.16,
+      description: 'Grants a civilization a sudden leap in scientific, artistic, or philosophical insight.',
+      benevolent: true
+    },
+    smite: {
+      id: 'smite',
+      name: 'Wrathful Bolt',
+      gestureName: 'Zigzag Lightning',
+      costBelief: 18,
+      entropyCost: 0.24,
+      alignmentDelta: -0.25,
+      description: 'Strikes down settlements with relativistic plasma, instilling terror and dogmatism.',
+      benevolent: false
+    },
+    dyson_spark: {
+      id: 'dyson_spark',
+      name: 'Stellar Forge',
+      gestureName: 'Square / Diamond Frame',
+      costBelief: 40,
+      entropyCost: 0.45,
+      alignmentDelta: +0.12,
+      description: 'Guides an advanced civilization to assemble a Dyson swarm around its host star.',
+      benevolent: true
+    },
+    undo_heat_death: {
+      id: 'undo_heat_death',
+      name: 'Poincaré Recurrence (Negentropy)',
+      gestureName: 'Hourglass',
+      costBelief: 120,
+      entropyCost: -4.5, // Restores cosmic lifespan at huge belief sacrifice
+      alignmentDelta: +0.30,
+      description: 'Sacrifices vast accumulated belief to pump negentropy into the vacuum, staving off Heat Death.',
+      benevolent: true
+    }
+  };
+
+  class GestureRecognizer {
+    constructor() {
+      this.numPoints = 32;
+      this.templates = this._buildTemplates();
+    }
+
+    _buildTemplates() {
+      const templates = [];
+      const add = (id, pts) => {
+        templates.push({ id, points: this.normalize(pts) });
+      };
+
+      // 1. Circle -> heal
+      const circle = [];
+      for (let i = 0; i <= 32; i++) {
+        const a = (i / 32) * Math.PI * 2;
+        circle.push({ x: Math.cos(a), y: Math.sin(a) });
+      }
+      add('heal', circle);
+
+      // 2. Spiral -> ignite_star
+      const spiral = [];
+      for (let i = 0; i <= 40; i++) {
+        const t = i / 40;
+        const a = t * Math.PI * 4;
+        const r = 0.2 + 0.8 * t;
+        spiral.push({ x: r * Math.cos(a), y: r * Math.sin(a) });
+      }
+      add('ignite_star', spiral);
+
+      // 3. Straight diagonal slash -> push_comet
+      const slash = [];
+      for (let i = 0; i <= 20; i++) {
+        const t = i / 20;
+        slash.push({ x: -1 + 2 * t, y: -1 + 1.5 * t });
+      }
+      add('push_comet', slash);
+      const slash2 = [];
+      for (let i = 0; i <= 20; i++) {
+        const t = i / 20;
+        slash2.push({ x: 1 - 2 * t, y: -1 + 1.5 * t });
+      }
+      add('push_comet', slash2);
+
+      // 4. Horizontal wave -> rain
+      const wave = [];
+      for (let i = 0; i <= 32; i++) {
+        const t = i / 32;
+        wave.push({ x: -1 + 2 * t, y: 0.5 * Math.sin(t * Math.PI * 3) });
+      }
+      add('rain', wave);
+
+      // 5. V-shape -> fire
+      const vshape = [
+        { x: -1, y: -1 }, { x: -0.5, y: 0 }, { x: 0, y: 1 }, { x: 0.5, y: 0 }, { x: 1, y: -1 }
+      ];
+      add('fire', vshape);
+
+      // 6. Caret ^ -> inspire
+      const caret = [
+        { x: -1, y: 1 }, { x: -0.5, y: 0 }, { x: 0, y: -1 }, { x: 0.5, y: 0 }, { x: 1, y: 1 }
+      ];
+      add('inspire', caret);
+
+      // 7. Zigzag -> smite
+      const zigzag = [
+        { x: 0.4, y: -1 }, { x: -0.6, y: -0.2 }, { x: 0.5, y: -0.1 }, { x: -0.7, y: 1 }
+      ];
+      add('smite', zigzag);
+
+      // 8. Figure-8 / Infinity -> seed_protocell
+      const inf = [];
+      for (let i = 0; i <= 40; i++) {
+        const a = (i / 40) * Math.PI * 2;
+        inf.push({ x: Math.sin(a), y: Math.sin(a) * Math.cos(a) });
+      }
+      add('seed_protocell', inf);
+
+      // 9. Square/Box -> dyson_spark
+      const box = [
+        { x: -1, y: -1 }, { x: 1, y: -1 }, { x: 1, y: 1 }, { x: -1, y: 1 }, { x: -1, y: -1 }
+      ];
+      add('dyson_spark', box);
+
+      // 10. Hourglass -> undo_heat_death
+      const hg = [
+        { x: -1, y: -1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: 1, y: 1 }, { x: -1, y: -1 }
+      ];
+      add('undo_heat_death', hg);
+
+      return templates;
+    }
+
+    pathLength(pts) {
+      let d = 0;
+      for (let i = 1; i < pts.length; i++) {
+        d += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+      }
+      return d;
+    }
+
+    resample(pts, n) {
+      if (!pts || pts.length < 2) return Array.from({ length: n }, () => ({ x: 0, y: 0 }));
+      const copy = pts.map(p => ({ x: p.x, y: p.y }));
+      const I = this.pathLength(copy) / (n - 1);
+      if (I < 1e-6) return Array.from({ length: n }, () => ({ x: copy[0].x, y: copy[0].y }));
+      let D = 0;
+      const newPts = [{ x: copy[0].x, y: copy[0].y }];
+      for (let i = 1; i < copy.length; i++) {
+        const d = Math.hypot(copy[i].x - copy[i - 1].x, copy[i].y - copy[i - 1].y);
+        if (D + d >= I) {
+          const qx = copy[i - 1].x + ((I - D) / d) * (copy[i].x - copy[i - 1].x);
+          const qy = copy[i - 1].y + ((I - D) / d) * (copy[i].y - copy[i - 1].y);
+          const q = { x: qx, y: qy };
+          newPts.push(q);
+          copy.splice(i, 0, q);
+          D = 0;
+        } else {
+          D += d;
+        }
+      }
+      while (newPts.length < n) {
+        newPts.push({ x: copy[copy.length - 1].x, y: copy[copy.length - 1].y });
+      }
+      return newPts.slice(0, n);
+    }
+
+    normalize(pts) {
+      const resampled = this.resample(pts, this.numPoints);
+      let cx = 0, cy = 0;
+      for (const p of resampled) { cx += p.x; cy += p.y; }
+      cx /= resampled.length; cy /= resampled.length;
+      const translated = resampled.map(p => ({ x: p.x - cx, y: p.y - cy }));
+      let maxSpan = 0;
+      for (const p of translated) {
+        maxSpan = Math.max(maxSpan, Math.abs(p.x), Math.abs(p.y));
+      }
+      const scale = maxSpan > 1e-5 ? 1 / maxSpan : 1;
+      return translated.map(p => ({ x: p.x * scale, y: p.y * scale }));
+    }
+
+    recognize(pts) {
+      if (!pts || pts.length < 4) return { id: 'ignite_star', score: 0.2 };
+      const cand = this.normalize(pts);
+      let bestId = 'ignite_star';
+      let bestDist = Infinity;
+      for (const tpl of this.templates) {
+        let dF = 0, dR = 0;
+        const n = this.numPoints;
+        for (let i = 0; i < n; i++) {
+          dF += Math.hypot(cand[i].x - tpl.points[i].x, cand[i].y - tpl.points[i].y);
+          dR += Math.hypot(cand[i].x - tpl.points[n - 1 - i].x, cand[i].y - tpl.points[n - 1 - i].y);
+        }
+        const d = Math.min(dF, dR) / n;
+        if (d < bestDist) {
+          bestDist = d;
+          bestId = tpl.id;
+        }
+      }
+      const score = Math.max(0, Math.min(1, 1 - bestDist / 1.2));
+      return { id: bestId, score, miracle: MIRACLE_DEFS[bestId] };
+    }
+  }
+
+  // ============================================================================
+  // 5. THE AVATAR CREATURE (RL Q-TABLE + 2-LAYER NEURAL POLICY + IMITATION)
+  // ============================================================================
+
+  const CREATURE_CONTEXTS = ['hungry', 'village_near', 'crisis', 'idle'];
+  const CREATURE_ACTIONS = [
+    'help_villagers',
+    'share_food',
+    'sing_and_dance',
+    'plant_flora',
+    'cast_heal_miracle',
+    'steal_grain',
+    'devour_villager',
+    'throw_boulder',
+    'cast_smite_miracle'
+  ];
+
+  const ACTION_VALENCE = {
+    help_villagers: +0.9,
+    share_food: +0.8,
+    sing_and_dance: +0.5,
+    plant_flora: +0.7,
+    cast_heal_miracle: +1.0,
+    steal_grain: -0.6,
+    devour_villager: -1.0,
+    throw_boulder: -0.8,
+    cast_smite_miracle: -0.95
+  };
+
+  class AvatarCreature {
+    constructor(seed) {
+      this.seed = seed >>> 0;
+      const rng = new PRNG(this.seed);
+      this.name = rng.pick(['Aureon', 'Kaelith', 'Nyxara', 'Solen', 'Oris', 'Thalor', 'Vespera']);
+      this.speciesArchetype = rng.pick(['Solar Seraph', 'Tidal Leviathan', 'Bipedal Chimera', 'Crystal Mantis']);
+      this.ageGyr = 0;
+      this.size = 1.0;
+      this.alignment = 0.0; // -1.0 (cruel beast) to +1.0 (luminous guardian)
+      this.drives = {
+        hunger: 0.35,
+        curiosity: 0.70,
+        play: 0.55,
+        fear: 0.15,
+        devotion: 0.50
+      };
+      // Tabular Q-matrix: context -> action -> value
+      this.qTable = {};
+      // 2-Layer Neural network bias weights per action (trained via reward & imitation)
+      this.nnWeights = {};
+      for (const ctx of CREATURE_CONTEXTS) {
+        this.qTable[ctx] = {};
+        for (const act of CREATURE_ACTIONS) {
+          this.qTable[ctx][act] = rng.range(-0.05, 0.05);
+        }
+      }
+      for (const act of CREATURE_ACTIONS) {
+        this.nnWeights[act] = [
+          rng.range(-0.05, 0.05), // w_hunger
+          rng.range(-0.05, 0.05), // w_curiosity
+          rng.range(-0.05, 0.05), // w_fear
+          0.0                     // learned moral bias
+        ];
+      }
+      this.lastContext = 'village_near';
+      this.lastAction = 'sing_and_dance';
+      this.history = [];
+      this.totalRewards = 0;
+      this.totalPunishments = 0;
+      this.imitatedMiracles = {};
+    }
+
+    clone() {
+      const c = new AvatarCreature(this.seed);
+      c.name = this.name;
+      c.speciesArchetype = this.speciesArchetype;
+      c.ageGyr = this.ageGyr;
+      c.size = this.size;
+      c.alignment = this.alignment;
+      c.drives = { ...this.drives };
+      c.qTable = JSON.parse(JSON.stringify(this.qTable));
+      c.nnWeights = JSON.parse(JSON.stringify(this.nnWeights));
+      c.lastContext = this.lastContext;
+      c.lastAction = this.lastAction;
+      c.history = this.history.slice(-30);
+      c.totalRewards = this.totalRewards;
+      c.totalPunishments = this.totalPunishments;
+      c.imitatedMiracles = { ...this.imitatedMiracles };
+      return c;
+    }
+
+    scoreAction(context, action) {
+      const q = (this.qTable[context] && this.qTable[context][action]) || 0;
+      const w = this.nnWeights[action] || [0, 0, 0, 0];
+      const mlpOut = Math.tanh(
+        w[0] * this.drives.hunger +
+        w[1] * this.drives.curiosity +
+        w[2] * this.drives.fear +
+        w[3]
+      );
+      return q + 0.65 * mlpOut;
+    }
+
+    getActionProbabilities(context = 'village_near') {
+      const temp = 0.35;
+      const scores = CREATURE_ACTIONS.map(a => this.scoreAction(context, a));
+      const maxS = Math.max(...scores);
+      const exps = scores.map(s => Math.exp((s - maxS) / temp));
+      const sum = exps.reduce((a, b) => a + b, 0) || 1;
+      const probs = {};
+      CREATURE_ACTIONS.forEach((a, i) => {
+        probs[a] = exps[i] / sum;
+      });
+      return probs;
+    }
+
+    chooseAction(context, rng) {
+      const probs = this.getActionProbabilities(context);
+      let r = rng.next();
+      let chosen = CREATURE_ACTIONS[0];
+      for (const act of CREATURE_ACTIONS) {
+        r -= probs[act];
+        if (r <= 0) {
+          chosen = act;
+          break;
+        }
+      }
+      this.lastContext = context;
+      this.lastAction = chosen;
+      const valence = ACTION_VALENCE[chosen] || 0;
+      this.alignment = Math.max(-1, Math.min(1, this.alignment * 0.96 + valence * 0.04));
+      this.history.push({ context, action: chosen, valence });
+      if (this.history.length > 40) this.history.shift();
+      return chosen;
+    }
+
+    // Reinforce a specific action (or lastAction) with reward > 0 (stroke) or < 0 (slap)
+    reinforce(reward, context = this.lastContext, action = this.lastAction) {
+      const lr = 0.35;
+      if (!this.qTable[context]) this.qTable[context] = {};
+      const oldQ = this.qTable[context][action] || 0;
+      this.qTable[context][action] = Math.max(-3, Math.min(3, oldQ + lr * (reward - oldQ)));
+
+      // Also update neural network policy weights and spillover to aligned actions
+      const targetValence = ACTION_VALENCE[action] || 0;
+      for (const act of CREATURE_ACTIONS) {
+        const v = ACTION_VALENCE[act] || 0;
+        const similarity = act === action ? 1.0 : (v * targetValence > 0 ? 0.45 : -0.35);
+        this.nnWeights[act][3] = Math.max(-3, Math.min(3, this.nnWeights[act][3] + lr * 0.6 * reward * similarity));
+        for (const ctx of CREATURE_CONTEXTS) {
+          this.qTable[ctx][act] = Math.max(-3, Math.min(3, this.qTable[ctx][act] + lr * 0.3 * reward * similarity));
+        }
+      }
+
+      if (reward > 0) {
+        this.totalRewards++;
+        this.drives.devotion = Math.min(1, this.drives.devotion + 0.08);
+        this.drives.fear = Math.max(0, this.drives.fear - 0.05);
+      } else if (reward < 0) {
+        this.totalPunishments++;
+        this.drives.fear = Math.min(1, this.drives.fear + 0.09);
+      }
+      const deltaAlign = reward * targetValence * 0.15;
+      this.alignment = Math.max(-1, Math.min(1, this.alignment + deltaAlign));
+    }
+
+    // Imitation learning when the God casts a miracle
+    observeMiracle(miracleId) {
+      this.imitatedMiracles[miracleId] = (this.imitatedMiracles[miracleId] || 0) + 1;
+      const def = MIRACLE_DEFS[miracleId];
+      if (!def) return;
+      if (def.benevolent) {
+        this.reinforce(+0.75, 'crisis', 'cast_heal_miracle');
+        this.reinforce(+0.55, 'village_near', 'help_villagers');
+      } else {
+        this.reinforce(+0.75, 'crisis', 'cast_smite_miracle');
+        this.reinforce(+0.55, 'village_near', 'throw_boulder');
+      }
+    }
+
+    getBenevolentProbability(context = 'village_near') {
+      const probs = this.getActionProbabilities(context);
+      let sum = 0;
+      for (const act of CREATURE_ACTIONS) {
+        if (ACTION_VALENCE[act] > 0) sum += probs[act];
+      }
+      return sum;
+    }
+  }
+
+  // ============================================================================
+  // 6. MAIN UNIVERSE SIMULATION ENGINE
+  // ============================================================================
+
+  class UniverseSimulation {
+    constructor(config = {}) {
+      this.seed = typeof config.seed === 'string'
+        ? fnv1a32(config.seed)
+        : ((config.seed !== undefined ? config.seed : 424242) >>> 0);
+      this.seedString = String(config.seed !== undefined ? config.seed : '424242');
+
+      const baseConsts = CREATION_PRESETS.default;
+      const c = config.constants || {};
+      this.constants = {
+        gravity: c.gravity !== undefined ? Number(c.gravity) : baseConsts.gravity,
+        expansion: c.expansion !== undefined ? Number(c.expansion) : baseConsts.expansion,
+        lumpiness: c.lumpiness !== undefined ? Number(c.lumpiness) : baseConsts.lumpiness,
+        darkMatter: c.darkMatter !== undefined ? Number(c.darkMatter) : baseConsts.darkMatter,
+        chemistryRichness: c.chemistryRichness !== undefined ? Number(c.chemistryRichness) : baseConsts.chemistryRichness,
+        starEfficiency: c.starEfficiency !== undefined ? Number(c.starEfficiency) : baseConsts.starEfficiency
+      };
+
+      this.actionLog = Array.isArray(config.actionLog)
+        ? JSON.parse(JSON.stringify(config.actionLog))
+        : [];
+      this.branches = []; // Saved alternate timelines for comparison
+      this.gestureRecognizer = new GestureRecognizer();
+
+      this._initUniverse();
+    }
+
+    _computePhysicsRegime() {
+      const { gravity, expansion, lumpiness, darkMatter, chemistryRichness, starEfficiency } = this.constants;
+      const structureRatio = (gravity * (0.4 + 0.6 * darkMatter) * lumpiness) / Math.max(0.1, expansion);
+
+      let regime = 'fertile';
+      let baseMaxAgeGyr = 22.0;
+
+      if (structureRatio < 0.28 || starEfficiency < 0.12) {
+        regime = 'big_rip_dispersed';
+        baseMaxAgeGyr = 16.0;
+      } else if (gravity / Math.max(0.1, expansion) > 4.2) {
+        regime = 'big_crunch';
+        baseMaxAgeGyr = 7.5;
+      } else if (chemistryRichness < 0.12) {
+        regime = 'sterile';
+        baseMaxAgeGyr = 24.0;
+      }
+
+      return {
+        regime,
+        structureRatio,
+        baseMaxAgeGyr
+      };
+    }
+
+    _initUniverse() {
+      this.timeGyr = 0.0;
+      this.stepCount = 0;
+      this.entropyAccumulated = 0.0; // In Gyr of shortened heat-death horizon
+      this.alignment = 0.0; // -1.0 cruel to +1.0 benevolent
+      this.beliefPower = 60.0; // Starting divine spark
+      this.mode = 'contemplative'; // 'contemplative' or 'meddling'
+
+      const phys = this._computePhysicsRegime();
+      this.regime = phys.regime;
+      this.structureRatio = phys.structureRatio;
+      this.baseMaxAgeGyr = phys.baseMaxAgeGyr;
+
+      // Focus state along the hierarchical ladder
+      this.focus = {
+        scaleIndex: 1, // 0..8
+        zoomMeters: 1e24,
+        filamentId: 0,
+        galaxyId: 0,
+        starId: 0,
+        planetId: 1
+      };
+
+      this.chronicle = [];
+      this.creature = new AvatarCreature(mixSeed(this.seed, 'avatar_creature'));
+
+      // Build hierarchical statistical universe at t=0
+      this._buildCosmicWebScaffold();
+      this._addChronicle(0.0, 'The Singularity ruptures. Space-time inflates with seed ' + this.seedString + ' (' + this.regime + ' regime).');
+    }
+
+    get heatDeathGyr() {
+      return Math.max(2.5, this.baseMaxAgeGyr - this.entropyAccumulated);
+    }
+
+    get currentEraName() {
+      const t = this.timeGyr;
+      const hd = this.heatDeathGyr;
+      if (this.regime === 'big_crunch' && t >= hd * 0.88) return 'The Great Crunch (Singular Collapse)';
+      if (t >= hd) return 'Heat Death (Maximum Entropy Vacuum)';
+      if (t < 0.15) return 'Primordial Inflation & Recombination';
+      if (t < 0.8) return 'Cosmic Dawn & First Halos';
+      if (t < 3.5) return 'Quasar Peak & Galactic Assembly';
+      if (t < hd * 0.72) return 'Stelliferous Era (Age of Worlds & Minds)';
+      if (t < hd * 0.92) return 'Degenerate Era (Red Dwarfs & Remnants)';
+      return 'Black Hole Evaporation Twilight';
+    }
+
+    _addChronicle(tGyr, text, category = 'cosmic') {
+      const entry = {
+        timeGyr: Number(tGyr.toFixed(3)),
+        text,
+        category
+      };
+      // Avoid exact duplicate messages
+      if (!this.chronicle.some(e => e.text === text && Math.abs(e.timeGyr - entry.timeGyr) < 0.05)) {
+        this.chronicle.push(entry);
+      }
+    }
+
+    // ========================================================================
+    // HIERARCHICAL GENERATION & LOD CONSISTENCY
+    // ========================================================================
+    // Parent statistical properties are computed deterministically from seeds
+    // AND reconciled exactly with detailed child collections when observed.
+
+    _buildCosmicWebScaffold() {
+      const rng = new PRNG(mixSeed(this.seed, 'cosmic_web'));
+      const numFilaments = 6;
+      this.filaments = [];
+
+      for (let fId = 0; fId < numFilaments; fId++) {
+        const fSeed = mixSeed(this.seed, `filament_${fId}`);
+        const fRng = new PRNG(fSeed);
+        const angle = (fId / numFilaments) * Math.PI * 2 + fRng.range(-0.2, 0.2);
+        const dist = fRng.range(0.22, 0.75);
+        const virialFactor = Math.max(0, Math.min(2.5, this.structureRatio * fRng.range(0.8, 1.25)));
+
+        const filament = {
+          id: fId,
+          seed: fSeed,
+          name: `Filament-${String.fromCharCode(65 + fId)}${fId + 1}`,
+          x: Math.cos(angle) * dist,
+          y: Math.sin(angle) * dist,
+          darkMatterMass: 1e14 * virialFactor * (0.6 + 0.4 * this.constants.darkMatter),
+          baryonFraction: 0.16 * this.constants.starEfficiency,
+          galaxies: []
+        };
+
+        // Pre-seed 4 galaxies per filament with deterministic seeds
+        const numGalaxies = 4;
+        for (let gId = 0; gId < numGalaxies; gId++) {
+          filament.galaxies.push(this._createGalaxy(fSeed, fId, gId));
+        }
+
+        this.filaments.push(filament);
+      }
+    }
+
+    _createGalaxy(filamentSeed, fId, gId) {
+      const gSeed = mixSeed(filamentSeed, `galaxy_${gId}`);
+      const rng = new PRNG(gSeed);
+      const names = ['Aethelgard', 'Vortexia', 'Kesh-Major', 'Ophiuchus-Prime', 'Siren-Cluster', 'Zeta-Halo', 'Velari-Spire', 'Nyx-Elliptica'];
+      const morphology = rng.next() < 0.68 ? 'Spiral' : 'Elliptical';
+
+      const gal = {
+        id: gId,
+        filamentId: fId,
+        seed: gSeed,
+        name: `${names[(fId * 4 + gId) % names.length]}-${fId}${gId}`,
+        morphology,
+        x: rng.range(-0.7, 0.7),
+        y: rng.range(-0.7, 0.7),
+        arms: morphology === 'Spiral' ? rng.int(2, 4) : 0,
+        mergerCount: 0,
+        baseMassSolar: 1e11 * Math.max(0.05, this.structureRatio) * rng.range(0.5, 1.6),
+        metallicityZ: 0.001,
+        starFormationRate: 0,
+        activeStarsCount: 0,
+        habitableWorldsCount: 0,
+        livingWorldsCount: 0,
+        civilizationsCount: 0,
+        stars: []
+      };
+
+      // Generate representative stellar sectors (8 stars per galaxy, where star 0 in galaxy 0 is the primary habitable candidate if physics allows)
+      const numStars = 8;
+      for (let sId = 0; sId < numStars; sId++) {
+        gal.stars.push(this._createStar(gSeed, fId, gId, sId));
+      }
+
+      this._reconcileGalaxyAggregate(gal);
+      return gal;
+    }
+
+    _createStar(galaxySeed, fId, gId, sId) {
+      const sSeed = mixSeed(galaxySeed, `star_${sId}`);
+      const rng = new PRNG(sSeed);
+      const starNames = ['Solis', 'Kesh', 'Velar', 'Aurelia', 'Hyperion', 'Tiamat', 'Cygnus', 'Mirach'];
+
+      // Initial mass function (Salpeter-like, with guaranteed solar-type star on sId === 0 or 1 so habitable worlds can arise if physics permits)
+      let massSolar;
+      if (sId === 0) {
+        massSolar = rng.range(0.88, 1.18);
+      } else if (sId === 1) {
+        massSolar = rng.range(0.75, 1.05);
+      } else if (sId === 2) {
+        // Massive OB star that will go supernova early and enrich the galaxy!
+        massSolar = rng.range(9.5, 22.0);
+      } else {
+        const u = rng.next();
+        massSolar = u < 0.6 ? rng.range(0.25, 0.85) : (u < 0.88 ? rng.range(0.85, 2.4) : rng.range(2.5, 14.0));
+      }
+
+      // Main-sequence lifetime scales as ~10 * M^-2.5 Gyr
+      const msLifetimeGyr = Math.max(0.08, 10.0 * Math.pow(massSolar, -2.1));
+      const birthTimeGyr = sId === 2 ? 0.25 : rng.range(0.35, 1.6);
+      const initialMetallicity = sId === 2 ? 0.002 : (0.012 * this.constants.chemistryRichness * this.constants.starEfficiency);
+
+      const star = {
+        id: sId,
+        galaxyId: gId,
+        filamentId: fId,
+        seed: sSeed,
+        name: `${starNames[sId % starNames.length]}-${fId}${gId}${sId}`,
+        x: rng.range(-0.8, 0.8),
+        y: rng.range(-0.8, 0.8),
+        massSolar,
+        luminositySolar: Math.pow(massSolar, 3.5),
+        temperatureK: 5778 * Math.pow(massSolar, 0.505),
+        phase: 'Protostar', // Protostar -> MainSequence -> RedGiant -> WhiteDwarf / NeutronStar / BlackHole
+        birthTimeGyr,
+        msLifetimeGyr,
+        metallicityZ: initialMetallicity,
+        supernovaTriggered: false,
+        dysonCompletion: 0.0, // 0..1 megastructure coverage
+        planets: []
+      };
+
+      const numPlanets = 5;
+      for (let pId = 0; pId < numPlanets; pId++) {
+        star.planets.push(this._createPlanet(sSeed, star, pId));
+      }
+
+      this._reconcileStarAggregate(star);
+      return star;
+    }
+
+    _createPlanet(starSeed, star, pId) {
+      const pSeed = mixSeed(starSeed, `planet_${pId}`);
+      const rng = new PRNG(pSeed);
+
+      // Semi-major axis in AU (Titius-Bode style spacing)
+      const orbitAU = Number((0.38 * Math.pow(1.72, pId) * rng.range(0.92, 1.08)).toFixed(3));
+      const hzCenter = Math.sqrt(star.luminositySolar);
+      const hzInner = hzCenter * 0.72;
+      const hzOuter = hzCenter * 1.48;
+
+      // Determine planet type by distance and metallicity
+      const canFormRocky = star.metallicityZ >= 0.003 && this.constants.starEfficiency >= 0.2;
+      let type = 'Ice Giant';
+      if (pId === 1 && star.id <= 1 && canFormRocky) {
+        // Ensure planet 1 on primary solar stars sits inside the habitable zone
+        type = 'Rocky Terrestrial';
+      } else if (orbitAU < hzInner * 0.85) {
+        type = canFormRocky ? 'Molten Rocky' : 'Hot Gas Dwarf';
+      } else if (orbitAU >= hzInner && orbitAU <= hzOuter && canFormRocky) {
+        type = 'Rocky Terrestrial';
+      } else if (orbitAU < hzOuter * 2.5) {
+        type = 'Gas Giant';
+      } else {
+        type = 'Ice World';
+      }
+
+      const effectiveOrbitAU = (pId === 1 && star.id <= 1) ? Number(hzCenter.toFixed(3)) : orbitAU;
+      const inHabitableZone = effectiveOrbitAU >= hzInner && effectiveOrbitAU <= hzOuter && type === 'Rocky Terrestrial';
+
+      // Voronoi tectonic plates (deterministic from pSeed)
+      const numPlates = rng.int(5, 9);
+      const plates = [];
+      for (let k = 0; k < numPlates; k++) {
+        plates.push({
+          id: k,
+          lon: rng.range(-Math.PI, Math.PI),
+          lat: rng.range(-Math.PI / 2, Math.PI / 2),
+          driftLon: rng.range(-0.05, 0.05),
+          driftLat: rng.range(-0.05, 0.05),
+          continental: k < Math.ceil(numPlates * 0.42),
+          elevation: k < Math.ceil(numPlates * 0.42) ? rng.range(0.2, 0.85) : rng.range(-0.8, -0.1)
+        });
+      }
+
+      const oceanCoverage = inHabitableZone ? rng.range(0.48, 0.76) : (type === 'Ice World' ? 0.2 : 0.0);
+      const surfaceTempK = inHabitableZone ? rng.range(278, 298) : Math.max(40, 280 / Math.sqrt(Math.max(0.1, effectiveOrbitAU)));
+
+      return {
+        id: pId,
+        starId: star.id,
+        galaxyId: star.galaxyId,
+        filamentId: star.filamentId,
+        seed: pSeed,
+        name: `${star.name}-${pId + 1}`,
+        type,
+        orbitAU: effectiveOrbitAU,
+        inHabitableZone,
+        massEarth: type === 'Gas Giant' ? rng.range(35, 180) : rng.range(0.6, 2.1),
+        radiusEarth: type === 'Gas Giant' ? rng.range(4.0, 9.5) : rng.range(0.85, 1.35),
+        oceanCoverage,
+        atmosphereDensity: inHabitableZone ? rng.range(0.8, 1.4) : (type === 'Gas Giant' ? 10.0 : 0.1),
+        surfaceTempK,
+        erosionIndex: 0.1,
+        impactCraters: 0,
+        axialTiltDeg: rng.range(5, 28),
+        plates,
+        hydrothermalCatalysis: (pId === 1 && star.id === 0) ? 1.35 : rng.range(0.15, 1.35),
+        chemistry: {
+          monomers: inHabitableZone ? 0.15 * this.constants.chemistryRichness : 0.01,
+          polymers: 0.0,
+          autocatalysisIndex: 0.0,
+          ribozymeCount: 0,
+          selfReplicating: false,
+          abiogenesisTimeGyr: null
+        },
+        biosphere: {
+          active: false,
+          biomass: 0.0,
+          biodiversity: 0,
+          multicellular: false,
+          massExtinctions: 0,
+          phyloTree: [], // Nodes: { id, parentId, name, genome, trophicLevel, multicellular, intelligence, population, birthGyr, extinct }
+          foodWebLinks: []
+        },
+        civilization: null
+      };
+    }
+
+    // ========================================================================
+    // LOD CONSISTENCY: STATISTICAL <-> DETAILED RECONCILIATION
+    // ========================================================================
+
+    _reconcileStarAggregate(star) {
+      let hab = 0, liv = 0, civ = 0, totalPlanetMass = 0, totalBiomass = 0;
+      for (const p of star.planets) {
+        totalPlanetMass += p.massEarth;
+        if (p.inHabitableZone) hab++;
+        if (p.biosphere.active) {
+          liv++;
+          totalBiomass += p.biosphere.biomass;
+        }
+        if (p.civilization && !p.civilization.collapsed) civ++;
+      }
+      star.stats = {
+        planetCount: star.planets.length,
+        totalPlanetMassEarth: Number(totalPlanetMass.toFixed(4)),
+        habitablePlanets: hab,
+        livingPlanets: liv,
+        totalBiomass: Number(totalBiomass.toFixed(4)),
+        activeCivilizations: civ
+      };
+      return star.stats;
+    }
+
+    _reconcileGalaxyAggregate(gal) {
+      let activeStars = 0, hab = 0, liv = 0, civ = 0, totalLum = 0, meanZ = 0, totalBiomass = 0;
+      for (const s of gal.stars) {
+        this._reconcileStarAggregate(s);
+        if (s.phase !== 'Protostar' && s.phase !== 'BlackHole') activeStars++;
+        totalLum += s.luminositySolar * (1 - 0.85 * s.dysonCompletion);
+        meanZ += s.metallicityZ;
+        hab += s.stats.habitablePlanets;
+        liv += s.stats.livingPlanets;
+        civ += s.stats.activeCivilizations;
+        totalBiomass += s.stats.totalBiomass;
+      }
+      meanZ = gal.stars.length ? meanZ / gal.stars.length : gal.metallicityZ;
+      gal.metallicityZ = meanZ;
+      gal.activeStarsCount = activeStars;
+      gal.habitableWorldsCount = hab;
+      gal.livingWorldsCount = liv;
+      gal.civilizationsCount = civ;
+      gal.stats = {
+        starCount: gal.stars.length,
+        activeStarsCount: activeStars,
+        totalLuminositySolar: Number(totalLum.toFixed(4)),
+        meanMetallicityZ: Number(meanZ.toFixed(6)),
+        habitableWorldsCount: hab,
+        livingWorldsCount: liv,
+        totalBiomass: Number(totalBiomass.toFixed(4)),
+        civilizationsCount: civ
+      };
+      return gal.stats;
+    }
+
+    _reconcileUniverseAggregates() {
+      let totalGalaxies = 0, totalStars = 0, totalHab = 0, totalLiv = 0, totalCiv = 0, totalBiomass = 0;
+      for (const f of this.filaments) {
+        let fStars = 0, fHab = 0, fLiv = 0, fCiv = 0, fBio = 0;
+        for (const g of f.galaxies) {
+          this._reconcileGalaxyAggregate(g);
+          totalGalaxies++;
+          fStars += g.stats.activeStarsCount;
+          fHab += g.stats.habitableWorldsCount;
+          fLiv += g.stats.livingWorldsCount;
+          fCiv += g.stats.civilizationsCount;
+          fBio += g.stats.totalBiomass;
+        }
+        f.stats = {
+          galaxyCount: f.galaxies.length,
+          activeStarsCount: fStars,
+          habitableWorldsCount: fHab,
+          livingWorldsCount: fLiv,
+          civilizationsCount: fCiv,
+          totalBiomass: Number(fBio.toFixed(4))
+        };
+        totalStars += fStars;
+        totalHab += fHab;
+        totalLiv += fLiv;
+        totalCiv += fCiv;
+        totalBiomass += fBio;
+      }
+      this.stats = {
+        filamentCount: this.filaments.length,
+        galaxyCount: totalGalaxies,
+        activeStarsCount: totalStars,
+        habitableWorldsCount: totalHab,
+        livingWorldsCount: totalLiv,
+        civilizationsCount: totalCiv,
+        totalBiomass: Number(totalBiomass.toFixed(4))
+      };
+      return this.stats;
+    }
+
+    // ========================================================================
+    // SIMULATION STEPPING (DETERMINISTIC ACROSS ALL SCALES)
+    // ========================================================================
+
+    step(dtGyr = 0.1) {
+      if (dtGyr <= 0) return;
+      const targetTime = this.timeGyr + dtGyr;
+      const subStep = 0.1; // Fixed internal quantum for strict determinism regardless of scrub step size
+      while (this.timeGyr + 1e-9 < targetTime) {
+        const dt = Math.min(subStep, targetTime - this.timeGyr);
+        this._stepFixed(dt);
+      }
+    }
+
+    _stepFixed(dtGyr) {
+      this.timeGyr = Number((this.timeGyr + dtGyr).toFixed(4));
+      this.stepCount++;
+
+      // Check and apply any recorded actions scheduled at this step/time
+      for (const act of this.actionLog) {
+        if (!act._applied && act.timeGyr <= this.timeGyr + 1e-6) {
+          this._executeActionInternal(act);
+          act._applied = true;
+        }
+      }
+
+      const hd = this.heatDeathGyr;
+      const isDead = this.timeGyr >= hd;
+
+      if (this.regime === 'big_rip_dispersed') {
+        // Everything flies apart; stars never ignite unless God manually ignited one
+        this._reconcileUniverseAggregates();
+        return;
+      }
+
+      if (this.regime === 'big_crunch' && this.timeGyr >= hd * 0.9) {
+        // Universe collapses in a Big Crunch
+        for (const f of this.filaments) {
+          for (const g of f.galaxies) {
+            for (const s of g.stars) {
+              s.phase = 'BlackHole';
+              for (const p of s.planets) {
+                p.biosphere.active = false;
+                p.biosphere.biomass = 0;
+                if (p.civilization) p.civilization.collapsed = true;
+              }
+            }
+          }
+        }
+        this._addChronicle(this.timeGyr, 'Gravity overcomes expansion: the cosmos collapses into a terminal Big Crunch singularity.', 'cosmic');
+        this._reconcileUniverseAggregates();
+        return;
+      }
+
+      // Step every filament, galaxy, star, planet, biosphere, civilization
+      for (const f of this.filaments) {
+        for (const g of f.galaxies) {
+          this._stepGalaxy(g, dtGyr, isDead);
+        }
+      }
+
+      // Step the Avatar Creature on the focused planet
+      const focusedPlanet = this.getFocusedPlanet();
+      if (focusedPlanet) {
+        this._stepCreature(focusedPlanet, dtGyr);
+      }
+
+      this._reconcileUniverseAggregates();
+    }
+
+    _stepGalaxy(gal, dtGyr, isDead) {
+      const stepRng = new PRNG(mixSeed(gal.seed, `step_${this.stepCount}`));
+
+      // Star formation rate peaks around 2-4 Gyr
+      const t = this.timeGyr;
+      gal.starFormationRate = isDead
+        ? 0
+        : Math.max(0, 12.0 * this.constants.starEfficiency * (t / 2.2) * Math.exp(-t / 3.8));
+
+      // Occasional galaxy mergers around 2.5 - 6.0 Gyr
+      if (!isDead && t > 2.0 && t < 8.0 && stepRng.next() < 0.015 * dtGyr * this.constants.gravity) {
+        gal.mergerCount++;
+        if (gal.mergerCount >= 2 && gal.morphology === 'Spiral') {
+          gal.morphology = 'Elliptical';
+          this._addChronicle(t, `Galaxy ${gal.name} underwent a major halo merger, transforming into a giant Elliptical.`, 'galaxy');
+        }
+      }
+
+      for (const star of gal.stars) {
+        this._stepStar(gal, star, dtGyr, isDead, stepRng);
+      }
+    }
+
+    _stepStar(gal, star, dtGyr, isDead, rng) {
+      const t = this.timeGyr;
+      if (isDead) {
+        star.phase = star.massSolar > 8 ? 'BlackHole' : 'WhiteDwarf';
+        star.luminositySolar = 1e-4;
+        for (const p of star.planets) {
+          p.biosphere.active = false;
+          p.biosphere.biomass = 0;
+          if (p.civilization) p.civilization.collapsed = true;
+        }
+        return;
+      }
+
+      if (t < star.birthTimeGyr) {
+        star.phase = 'Protostar';
+        return;
+      }
+
+      const stellarAge = t - star.birthTimeGyr;
+      if (stellarAge < star.msLifetimeGyr) {
+        if (star.phase === 'Protostar') {
+          star.phase = 'MainSequence';
+          if (star.id === 0 && gal.id === 0 && gal.filamentId === 0) {
+            this._addChronicle(t, `First-light main-sequence ignition of ${star.name} in ${gal.name}.`, 'star');
+          }
+        }
+      } else if (stellarAge < star.msLifetimeGyr * 1.15) {
+        star.phase = 'RedGiant';
+        star.luminositySolar = Math.pow(star.massSolar, 3.5) * 18.0;
+        star.temperatureK = 3400;
+      } else {
+        if (star.massSolar >= 8.0) {
+          if (!star.supernovaTriggered) {
+            star.supernovaTriggered = true;
+            // Supernova enriches all stars & planets in the galaxy with heavy elements!
+            const zBoost = 0.014 * this.constants.chemistryRichness * this.constants.starEfficiency;
+            for (const otherStar of gal.stars) {
+              otherStar.metallicityZ += zBoost;
+              for (const p of otherStar.planets) {
+                if (p.orbitAU >= 0.65 && p.orbitAU <= 1.65 && otherStar.metallicityZ >= 0.005) {
+                  if (p.type !== 'Rocky Terrestrial' && p.id === 1) {
+                    p.type = 'Rocky Terrestrial';
+                    p.inHabitableZone = true;
+                    p.oceanCoverage = 0.62;
+                  }
+                }
+              }
+            }
+            this._addChronicle(t, `Supernova of massive star ${star.name} seeded ${gal.name} with heavy elements (Fe, C, O, Si).`, 'star');
+          }
+          star.phase = star.massSolar >= 16.0 ? 'BlackHole' : 'NeutronStar';
+          star.luminositySolar = 0.001;
+          star.temperatureK = 120000;
+        } else {
+          star.phase = 'WhiteDwarf';
+          star.luminositySolar = 0.005;
+          star.temperatureK = 18000;
+        }
+      }
+
+      for (const planet of star.planets) {
+        this._stepPlanet(gal, star, planet, dtGyr, rng);
+      }
+    }
+
+    _stepPlanet(gal, star, planet, dtGyr, rng) {
+      const t = this.timeGyr;
+
+      // Tectonic drift & erosion
+      planet.erosionIndex = Math.min(1.0, planet.erosionIndex + 0.015 * dtGyr * (planet.oceanCoverage + 0.2));
+      for (const pl of planet.plates) {
+        pl.lon = ((pl.lon + pl.driftLon * dtGyr + Math.PI) % (Math.PI * 2)) - Math.PI;
+      }
+
+      // Only MainSequence stars sustain temperate habitable biospheres naturally
+      const starViable = star.phase === 'MainSequence';
+      if (!starViable && planet.biosphere.active && (!planet.civilization || planet.civilization.techLevel < 7)) {
+        planet.biosphere.active = false;
+        planet.biosphere.biomass = 0;
+        if (planet.civilization) planet.civilization.collapsed = true;
+        return;
+      }
+
+      // 1. Artificial Chemistry in oceans & tidal pools
+      const chem = planet.chemistry;
+      if (planet.inHabitableZone && planet.oceanCoverage > 0.2 && starViable) {
+        const zFactor = Math.min(2.5, star.metallicityZ / 0.012);
+        const rich = this.constants.chemistryRichness * zFactor * (planet.hydrothermalCatalysis || 1.0);
+
+        if (rich >= 0.55) {
+          chem.monomers = Math.min(1.0, chem.monomers + 0.48 * dtGyr * rich);
+          if (chem.monomers > 0.30) {
+            chem.polymers = Math.min(1.0, chem.polymers + 0.45 * dtGyr * rich * chem.monomers);
+          }
+          if (chem.polymers > 0.25) {
+            chem.autocatalysisIndex = Math.min(1.0, chem.autocatalysisIndex + 0.42 * dtGyr * rich * chem.polymers);
+            chem.ribozymeCount = Math.floor(chem.autocatalysisIndex * 1200 * rich);
+          }
+          // Self-replication threshold
+          if (!chem.selfReplicating && chem.autocatalysisIndex >= 0.52) {
+            chem.selfReplicating = true;
+            chem.abiogenesisTimeGyr = t;
+            this._triggerAbiogenesis(planet, t, rng);
+          }
+        } else if (rich > 0.1) {
+          // Prebiotic soup that stalls below self-replication threshold
+          chem.monomers = Math.min(0.45, chem.monomers + 0.12 * dtGyr * rich);
+          chem.polymers = Math.min(0.22, chem.polymers + 0.05 * dtGyr * rich);
+        }
+      }
+
+      // 2. Open-ended Evolution & Phylogenetic Tree
+      if (planet.biosphere.active) {
+        this._stepBiosphere(planet, dtGyr, rng);
+      }
+
+      // 3. Minds & Civilizations
+      if (planet.civilization && !planet.civilization.collapsed) {
+        this._stepCivilization(gal, star, planet, dtGyr, rng);
+      }
+    }
+
+    _triggerAbiogenesis(planet, tGyr, rng) {
+      const bio = planet.biosphere;
+      if (bio.active) return;
+      bio.active = true;
+      bio.biomass = 0.15;
+      bio.biodiversity = 1;
+      const rootSpecies = {
+        id: 1,
+        parentId: null,
+        name: 'Proto-Ribozyme LUCA',
+        genome: '010110010011',
+        trophicLevel: 'Autotroph (Chemosynthetic)',
+        multicellular: false,
+        intelligence: 0.02,
+        population: 1.0,
+        birthGyr: tGyr,
+        extinct: false
+      };
+      bio.phyloTree = [rootSpecies];
+      bio.foodWebLinks = [];
+      this._addChronicle(tGyr, `Abiogenesis on ${planet.name}: autocatalytic tidal-pool ribozymes crossed the self-replication threshold!`, 'life');
+    }
+
+    _mutateGenome(genome, rng) {
+      const chars = genome.split('');
+      const idx = rng.int(0, chars.length - 1);
+      chars[idx] = chars[idx] === '1' ? '0' : '1';
+      if (rng.next() < 0.35 && chars.length < 24) {
+        chars.push(rng.next() < 0.5 ? '1' : '0');
+      }
+      return chars.join('');
+    }
+
+    _stepBiosphere(planet, dtGyr, rng) {
+      const bio = planet.biosphere;
+      const t = this.timeGyr;
+      const rich = this.constants.chemistryRichness;
+
+      bio.biomass = Math.min(100.0, bio.biomass + 4.5 * dtGyr * rich * planet.oceanCoverage);
+
+      const extant = bio.phyloTree.filter(s => !s.extinct);
+      if (extant.length === 0) {
+        // Recover from survivor spore if ocean remains
+        if (planet.oceanCoverage > 0.15) {
+          const recId = bio.phyloTree.length + 1;
+          bio.phyloTree.push({
+            id: recId,
+            parentId: 1,
+            name: `Lazarus-Clade-${recId}`,
+            genome: '110010110111',
+            trophicLevel: 'Autotroph',
+            multicellular: bio.multicellular,
+            intelligence: 0.08,
+            population: 0.5,
+            birthGyr: t,
+            extinct: false
+          });
+        }
+        return;
+      }
+
+      // Speciation
+      const shouldSpeciate = extant.length < 18 && (rng.next() < 2.85 * dtGyr * rich || extant.length < 6);
+      if (shouldSpeciate) {
+        const parent = rng.pick(extant);
+        const newId = bio.phyloTree.length + 1;
+        const newGenome = this._mutateGenome(parent.genome, rng);
+
+        // Rare multicellularity transition once biomass >= 2.0
+        const becomesMulti = parent.multicellular || (bio.biomass >= 2.0 && bio.phyloTree.length >= 3);
+        if (becomesMulti && !bio.multicellular) {
+          bio.multicellular = true;
+          this._addChronicle(t, `Multicellularity evolved on ${planet.name}, unlocking complex tissues and food webs.`, 'life');
+        }
+
+        const trophicLevels = becomesMulti
+          ? ['Primary Producer (Flora)', 'Herbivore Grazer', 'Apex Predator', 'Omnivore Tool-User']
+          : ['Autotroph (Chemosynthetic)', 'Photo-Cyanobacteria', 'Heterotroph Phage'];
+        const trophic = trophicLevels[newId % trophicLevels.length];
+        const intBoost = becomesMulti ? rng.range(0.06, 0.19) * rich : rng.range(0.01, 0.03);
+        const newInt = Math.min(1.0, parent.intelligence + intBoost);
+
+        const prefixes = ['Velari', 'Keshian', 'Aurean', 'Thalassic', 'Chitin', 'Sylvani', 'Nocturn', 'Crystalline'];
+        const suffixes = ['worm', 'frond', 'strider', 'nautilus', 'raptor', 'cephalon', 'sapiens', 'arboreal'];
+        const child = {
+          id: newId,
+          parentId: parent.id,
+          name: `${prefixes[newId % prefixes.length]} ${suffixes[(newId * 3) % suffixes.length]}-${newId}`,
+          genome: newGenome,
+          trophicLevel: trophic,
+          multicellular: becomesMulti,
+          intelligence: Number(newInt.toFixed(3)),
+          population: Number(rng.range(0.4, 2.5).toFixed(2)),
+          birthGyr: t,
+          extinct: false
+        };
+        bio.phyloTree.push(child);
+        bio.foodWebLinks.push({ from: parent.id, to: child.id, type: trophic });
+
+        // Check intelligence crossover for Civilization emergence
+        if (!planet.civilization && child.multicellular && (child.intelligence >= 0.42 || (bio.phyloTree.length >= 6 && t >= 2.6))) {
+          child.intelligence = Math.max(0.55, child.intelligence);
+          this._foundCivilization(planet, child, t, rng);
+        }
+      }
+
+      // Natural asteroid mass extinction (at least one natural recovery during universe history around t ~ 2.2 Gyr on primary world)
+      if (bio.massExtinctions === 0 && t >= 2.1 && t <= 2.5 && bio.phyloTree.length >= 3) {
+        this._triggerMassExtinction(planet, 'Chicxulub-class bolide impact', 0.5);
+      }
+
+      bio.biodiversity = bio.phyloTree.filter(s => !s.extinct).length;
+    }
+
+    _triggerMassExtinction(planet, cause, severity = 0.65) {
+      const bio = planet.biosphere;
+      if (!bio.active) return;
+      bio.massExtinctions++;
+      planet.impactCraters++;
+      bio.biomass = Math.max(0.2, bio.biomass * (1 - severity));
+      const extant = bio.phyloTree.filter(s => !s.extinct);
+      // Always leave at least 1 hardy survivor clade so adaptive radiation can recover
+      for (let i = 1; i < extant.length; i++) {
+        if ((i / extant.length) <= severity) {
+          extant[i].extinct = true;
+        }
+      }
+      // Post-extinction adaptive radiation bursts 2 recovery species
+      const survivor = bio.phyloTree.find(s => !s.extinct) || bio.phyloTree[0];
+      if (survivor) {
+        survivor.extinct = false;
+        for (let r = 0; r < 2; r++) {
+          const recId = bio.phyloTree.length + 1;
+          bio.phyloTree.push({
+            id: recId,
+            parentId: survivor.id,
+            name: `Radiant-Survivor-${recId}`,
+            genome: survivor.genome + (r ? '1' : '0'),
+            trophicLevel: r === 0 ? 'Primary Producer (Flora)' : 'Omnivore Tool-User',
+            multicellular: true,
+            intelligence: Math.min(1.0, survivor.intelligence + 0.18),
+            population: 1.4,
+            birthGyr: this.timeGyr,
+            extinct: false
+          });
+        }
+      }
+      bio.biodiversity = bio.phyloTree.filter(s => !s.extinct).length;
+      this._addChronicle(this.timeGyr, `Mass extinction on ${planet.name} (${cause})! Surviving clades radiated into vacant niches.`, 'life');
+    }
+
+    _foundCivilization(planet, founderSpecies, tGyr, rng) {
+      const civNames = ['Velari Concord', 'Keshite Archive', 'Solaris Synod', 'Aurelian Republic', 'Thalassic Choir'];
+      const styles = ['Bioluminescent Coral Spires', 'Basalt Megaliths', 'Golden Geodesic Domes', 'Floating Pelagic Rings'];
+      const civName = civNames[(planet.id + planet.starId + planet.galaxyId) % civNames.length];
+      planet.civilization = {
+        name: civName,
+        founderSpecies: founderSpecies.name,
+        foundedGyr: tGyr,
+        populationMillions: 12.0,
+        settlements: 3,
+        techLevel: 1, // 1: Stone/Fire, 2: Bronze/Agrarian, 3: Industrial, 4: Atomic/Information, 5: Orbital, 6: Interplanetary, 7: Dyson Swarm, 8: Interstellar Probes, 9: Transcendence / God-Aware
+        architectureStyle: styles[(planet.id + planet.starId) % styles.length],
+        cultureTrait: rng.pick(['Harmonic Empiricists', 'Stargazing Mystics', 'Thermodynamic Ascetics', 'Mercantile Navigators']),
+        warIndex: 0.1,
+        tradeIndex: 0.65,
+         collapsed: false,
+        noticedGod: false,
+        messagesToGod: [],
+        probesLaunched: 0,
+        religion: {
+          deityTitle: 'The Unseen Prime Mover',
+          stance: 'Agnostic Wonder', // Agnostic Wonder | Devout Love | Dependent Adoration | Dread & Appeasement | Forgotten Myth
+          beliefStrength: 0.45,
+          perceivedAlignment: 0.0,
+          kindActsWitnessed: 0,
+          cruelActsWitnessed: 0,
+          timeSinceLastMiracleGyr: 0.0
+        }
+      };
+      this._addChronicle(tGyr, `Sapience! The ${founderSpecies.name} of ${planet.name} kindled fire and founded the ${civName}.`, 'civ');
+    }
+
+    _stepCivilization(gal, star, planet, dtGyr, rng) {
+      const civ = planet.civilization;
+      const rel = civ.religion;
+      const t = this.timeGyr;
+
+      // Update religion memory of the God
+      rel.timeSinceLastMiracleGyr += dtGyr;
+      if (rel.timeSinceLastMiracleGyr > 1.8 && rel.kindActsWitnessed + rel.cruelActsWitnessed === 0) {
+        rel.stance = 'Forgotten Myth';
+        rel.beliefStrength = Math.max(0.15, rel.beliefStrength - 0.04 * dtGyr);
+      } else if (rel.kindActsWitnessed > rel.cruelActsWitnessed + 1) {
+        rel.stance = rel.kindActsWitnessed > 5 ? 'Dependent Adoration' : 'Devout Love';
+        rel.deityTitle = 'The Golden Hand of Grace';
+      } else if (rel.cruelActsWitnessed > rel.kindActsWitnessed) {
+        rel.stance = 'Dread & Appeasement';
+        rel.deityTitle = 'The Jagged Sky-Tyrant';
+      }
+
+      // Generate Belief Power for the God
+      const beliefHarvest = civ.settlements * rel.beliefStrength * (1 + civ.techLevel * 0.25) * dtGyr * 3.5;
+      this.beliefPower = Math.min(999, this.beliefPower + beliefHarvest);
+
+      // Tech progression & settlements
+      const techRate = 0.85 * dtGyr * (0.8 + 0.4 * civ.tradeIndex - 0.3 * civ.warIndex);
+      const oldTech = Math.floor(civ.techLevel);
+      civ.techLevel = Math.min(9.9, civ.techLevel + techRate);
+      const newTech = Math.floor(civ.techLevel);
+
+      civ.populationMillions = Math.min(45000, civ.populationMillions * (1 + 0.25 * dtGyr));
+      civ.settlements = Math.min(24, Math.max(1, Math.floor(3 + civ.techLevel * 2.1)));
+
+      // Megastructures & Dyson Swarm at Tech >= 7
+      if (newTech >= 7) {
+        star.dysonCompletion = Math.min(0.95, star.dysonCompletion + 0.18 * dtGyr);
+        if (oldTech < 7) {
+          this._addChronicle(t, `The ${civ.name} began constructing a Dyson Swarm around ${star.name}, harvesting stellar output.`, 'civ');
+        }
+      }
+
+      // Interstellar probes & colonizing neighboring planets at Tech >= 8
+      if (newTech >= 8 && civ.probesLaunched < 4) {
+        civ.probesLaunched++;
+        for (const otherP of star.planets) {
+          if (otherP.id !== planet.id && !otherP.civilization && otherP.type !== 'Gas Giant') {
+            otherP.inHabitableZone = true;
+            otherP.oceanCoverage = Math.max(0.35, otherP.oceanCoverage);
+            otherP.biosphere.active = true;
+            otherP.biosphere.biomass = Math.max(4.0, otherP.biosphere.biomass);
+            this._foundCivilization(otherP, { name: `${civ.name} Vanguard` }, t, rng);
+            this._addChronicle(t, `Interstellar Vanguard probes from ${civ.name} terraformed and colonized ${otherP.name}!`, 'civ');
+            break;
+          }
+        }
+      }
+
+      // Noticing the God & talking back at Tech >= 8
+      if (newTech >= 8 && !civ.noticedGod) {
+        civ.noticedGod = true;
+        const msg = this.alignment >= 0
+          ? `"We have measured the local entropy anomalies of Your Hand, Benevolent Architect. Your interventions shortened cosmic dusk by ${this.entropyAccumulated.toFixed(2)} Gyr—yet we thank You for the spark of being."`
+          : `"We see Your cursor in the cosmic microwave background, Cruel Demiurge! Every smite costs the universe its future. Stay Your hand, or we shall shield our stars!"`;
+        civ.messagesToGod.push({ timeGyr: t, message: msg });
+        this._addChronicle(t, `The ${civ.name} detected non-local entropy signatures and addressed You directly: ${msg}`, 'civ');
+      }
+    }
+
+    _stepCreature(planet, dtGyr) {
+      this.creature.ageGyr = Number((this.creature.ageGyr + dtGyr).toFixed(3));
+      this.creature.size = Number((1.0 + Math.min(2.5, this.creature.ageGyr * 0.25)).toFixed(2));
+      const rng = new PRNG(mixSeed(this.creature.seed, `cstep_${this.stepCount}`));
+
+      // Determine context on planet
+      let ctx = 'idle';
+      if (planet.civilization && !planet.civilization.collapsed) {
+        ctx = rng.next() < 0.65 ? 'village_near' : 'hungry';
+      } else if (planet.biosphere.active) {
+        ctx = 'hungry';
+      }
+
+      const action = this.creature.chooseAction(ctx, rng);
+      if (planet.civilization && !planet.civilization.collapsed) {
+        const rel = planet.civilization.religion;
+        if (ACTION_VALENCE[action] > 0) {
+          rel.kindActsWitnessed++;
+          rel.beliefStrength = Math.min(1.0, rel.beliefStrength + 0.04);
+          planet.civilization.tradeIndex = Math.min(1.0, planet.civilization.tradeIndex + 0.02);
+        } else {
+          rel.cruelActsWitnessed++;
+          rel.beliefStrength = Math.min(1.0, rel.beliefStrength + 0.03);
+          planet.civilization.warIndex = Math.min(1.0, planet.civilization.warIndex + 0.03);
+        }
+      }
+    }
+
+    // ========================================================================
+    // GOD INTERACTIONS, MIRACLES & ACTION LOG
+    // ========================================================================
+
+    castMiracle(miracleId, targetSpec = {}) {
+      const def = MIRACLE_DEFS[miracleId];
+      if (!def) return { ok: false, reason: 'Unknown miracle' };
+
+      const action = {
+        type: 'miracle',
+        miracleId,
+        timeGyr: Number(this.timeGyr.toFixed(4)),
+        filamentId: targetSpec.filamentId !== undefined ? targetSpec.filamentId : this.focus.filamentId,
+        galaxyId: targetSpec.galaxyId !== undefined ? targetSpec.galaxyId : this.focus.galaxyId,
+        starId: targetSpec.starId !== undefined ? targetSpec.starId : this.focus.starId,
+        planetId: targetSpec.planetId !== undefined ? targetSpec.planetId : this.focus.planetId,
+        _applied: true
+      };
+
+      this.actionLog.push(action);
+      const res = this._executeActionInternal(action);
+      this._reconcileUniverseAggregates();
+      return res;
+    }
+
+    interactHand(handAction, targetSpec = {}) {
+      // handAction: 'stroke_creature' | 'slap_creature' | 'cradle_planet' | 'throw_asteroid' | 'nudge_star'
+      const action = {
+        type: 'hand',
+        handAction,
+        timeGyr: Number(this.timeGyr.toFixed(4)),
+        filamentId: targetSpec.filamentId !== undefined ? targetSpec.filamentId : this.focus.filamentId,
+        galaxyId: targetSpec.galaxyId !== undefined ? targetSpec.galaxyId : this.focus.galaxyId,
+        starId: targetSpec.starId !== undefined ? targetSpec.starId : this.focus.starId,
+        planetId: targetSpec.planetId !== undefined ? targetSpec.planetId : this.focus.planetId,
+        context: targetSpec.context || this.creature.lastContext,
+        creatureAction: targetSpec.creatureAction || this.creature.lastAction,
+        _applied: true
+      };
+      this.actionLog.push(action);
+      const res = this._executeActionInternal(action);
+      this._reconcileUniverseAggregates();
+      return res;
+    }
+
+    _executeActionInternal(action) {
+      const f = this.filaments[action.filamentId] || this.filaments[0];
+      const g = (f && f.galaxies[action.galaxyId]) || f.galaxies[0];
+      const s = (g && g.stars[action.starId]) || g.stars[0];
+      const p = (s && s.planets[action.planetId]) || s.planets[1] || s.planets[0];
+
+      if (action.type === 'hand') {
+        if (action.handAction === 'stroke_creature') {
+          this.creature.reinforce(+1.0, action.context, action.creatureAction);
+          this.alignment = Math.min(1, this.alignment + 0.05);
+          this._addChronicle(action.timeGyr, `The God's Hand gently stroked ${this.creature.name}, reinforcing "${action.creatureAction}".`, 'god');
+          return { ok: true, handAction: action.handAction };
+        }
+        if (action.handAction === 'slap_creature') {
+          this.creature.reinforce(-1.0, action.context, action.creatureAction);
+          this.alignment = Math.max(-1, this.alignment - 0.05);
+          this._addChronicle(action.timeGyr, `The God's Hand slapped ${this.creature.name}, punishing "${action.creatureAction}".`, 'god');
+          return { ok: true, handAction: action.handAction };
+        }
+        if (action.handAction === 'cradle_planet' && p) {
+          p.surfaceTempK = 288;
+          p.inHabitableZone = true;
+          this.alignment = Math.min(1, this.alignment + 0.06);
+          this.entropyAccumulated = Math.max(0, this.entropyAccumulated + 0.05);
+          this._addChronicle(action.timeGyr, `The God cradled ${p.name} in warm gravity, stabilizing its orbital climate.`, 'god');
+          return { ok: true, handAction: action.handAction };
+        }
+        if (action.handAction === 'throw_asteroid' && p) {
+          this._triggerMassExtinction(p, 'Hand-hurled kinetic asteroid', 0.6);
+          this.alignment = Math.max(-1, this.alignment - 0.14);
+          this.entropyAccumulated += 0.12;
+          return { ok: true, handAction: action.handAction };
+        }
+      }
+
+      if (action.type === 'miracle') {
+        const def = MIRACLE_DEFS[action.miracleId];
+        if (!def) return { ok: false };
+
+        this.beliefPower = Math.max(0, this.beliefPower - def.costBelief);
+        this.entropyAccumulated = Math.max(-10, this.entropyAccumulated + def.entropyCost);
+        this.alignment = Math.max(-1, Math.min(1, this.alignment + def.alignmentDelta));
+
+        // Creature observes & imitates the miracle
+        this.creature.observeMiracle(action.miracleId);
+
+        const rng = new PRNG(mixSeed(this.seed, `miracle_${this.actionLog.length}_${action.timeGyr}`));
+
+        switch (action.miracleId) {
+          case 'ignite_star':
+            if (s) {
+              s.phase = 'MainSequence';
+              s.birthTimeGyr = Math.min(s.birthTimeGyr, action.timeGyr);
+              s.msLifetimeGyr += 4.5;
+              s.metallicityZ = Math.max(0.015, s.metallicityZ + 0.01);
+              this._addChronicle(action.timeGyr, `Miracle [Ignite Star]: ${s.name} blazed with renewed hydrogen fusion (+${def.entropyCost} Gyr entropy cost).`, 'god');
+            }
+            break;
+          case 'push_comet':
+            if (p) {
+              p.oceanCoverage = Math.min(0.85, p.oceanCoverage + 0.15);
+              if (p.biosphere.active) {
+                this._triggerMassExtinction(p, 'Divinely steered comet impact', 0.55);
+              } else {
+                p.impactCraters++;
+                this._addChronicle(action.timeGyr, `Miracle [Steer Comet]: Volatile-rich comet struck ${p.name}, delivering water and scarring the crust.`, 'god');
+              }
+            }
+            break;
+          case 'rain':
+            if (p) {
+              p.oceanCoverage = Math.min(0.8, Math.max(0.5, p.oceanCoverage + 0.25));
+              p.type = 'Rocky Terrestrial';
+              p.inHabitableZone = true;
+              p.chemistry.monomers = Math.min(1, p.chemistry.monomers + 0.35);
+              this._addChronicle(action.timeGyr, `Miracle [Monsoon Blessing]: Deluges filled the tectonic basins of ${p.name}.`, 'god');
+            }
+            break;
+          case 'fire':
+            if (p) {
+              p.surfaceTempK += 65;
+              if (p.biosphere.active) {
+                p.biosphere.biomass = Math.max(0.1, p.biosphere.biomass * 0.4);
+              }
+              if (p.civilization && !p.civilization.collapsed) {
+                p.civilization.religion.cruelActsWitnessed += 2;
+                p.civilization.religion.timeSinceLastMiracleGyr = 0;
+              }
+              this._addChronicle(action.timeGyr, `Miracle [Solar Tempest]: Firestorms swept across ${p.name}.`, 'god');
+            }
+            break;
+          case 'heal':
+            if (p) {
+              p.surfaceTempK = 288;
+              if (p.biosphere.active) {
+                p.biosphere.biomass = Math.min(100, p.biosphere.biomass + 20);
+              }
+              if (p.civilization && !p.civilization.collapsed) {
+                p.civilization.religion.kindActsWitnessed += 2;
+                p.civilization.religion.beliefStrength = Math.min(1, p.civilization.religion.beliefStrength + 0.2);
+                p.civilization.religion.timeSinceLastMiracleGyr = 0;
+              }
+              this._addChronicle(action.timeGyr, `Miracle [Harmonic Restoration]: Ecosystems and minds on ${p.name} were healed.`, 'god');
+            }
+            break;
+          case 'seed_protocell':
+            if (p) {
+              p.type = 'Rocky Terrestrial';
+              p.inHabitableZone = true;
+              p.oceanCoverage = Math.max(0.55, p.oceanCoverage);
+              p.chemistry.monomers = 1.0;
+              p.chemistry.polymers = 1.0;
+              p.chemistry.autocatalysisIndex = 1.0;
+              p.chemistry.selfReplicating = true;
+              p.chemistry.abiogenesisTimeGyr = action.timeGyr;
+              this._triggerAbiogenesis(p, action.timeGyr, rng);
+            }
+            break;
+          case 'inspire':
+            if (p) {
+              if (!p.biosphere.active) {
+                this._triggerAbiogenesis(p, action.timeGyr, rng);
+              }
+              if (!p.civilization) {
+                const sp = p.biosphere.phyloTree[p.biosphere.phyloTree.length - 1];
+                sp.multicellular = true;
+                sp.intelligence = 0.85;
+                this._foundCivilization(p, sp, action.timeGyr, rng);
+              } else {
+                p.civilization.techLevel = Math.min(9.9, p.civilization.techLevel + 1.8);
+                p.civilization.religion.kindActsWitnessed += 2;
+                p.civilization.religion.beliefStrength = Math.min(1, p.civilization.religion.beliefStrength + 0.25);
+                p.civilization.religion.timeSinceLastMiracleGyr = 0;
+              }
+              this._addChronicle(action.timeGyr, `Miracle [Epiphany]: Divine revelation accelerated sapience and science on ${p.name}.`, 'god');
+            }
+            break;
+          case 'smite':
+            if (p) {
+              if (p.civilization && !p.civilization.collapsed) {
+                p.civilization.settlements = Math.max(1, p.civilization.settlements - 2);
+                p.civilization.populationMillions *= 0.55;
+                p.civilization.religion.cruelActsWitnessed += 3;
+                p.civilization.religion.beliefStrength = Math.min(1, p.civilization.religion.beliefStrength + 0.3);
+                p.civilization.religion.timeSinceLastMiracleGyr = 0;
+              }
+              this._addChronicle(action.timeGyr, `Miracle [Wrathful Bolt]: Relativistic lightning struck ${p.name}, leaving awe and terror.`, 'god');
+            }
+            break;
+          case 'dyson_spark':
+            if (s && p) {
+              s.dysonCompletion = Math.min(1.0, s.dysonCompletion + 0.55);
+              if (p.civilization) {
+                p.civilization.techLevel = Math.max(7.5, p.civilization.techLevel);
+              }
+              this._addChronicle(action.timeGyr, `Miracle [Stellar Forge]: Dyson swarm rings materialized around ${s.name}.`, 'god');
+            }
+            break;
+          case 'undo_heat_death':
+            this._addChronicle(action.timeGyr, `Miracle [Poincaré Recurrence]: Vast belief inverted cosmic entropy, pushing Heat Death back by 4.50 Gyr!`, 'god');
+            break;
+        }
+        return { ok: true, miracle: def };
+      }
+      return { ok: false };
+    }
+
+    // ========================================================================
+    // TIMELINE SCRUBBING (EXACT REPLAY) & BRANCHING
+    // ========================================================================
+
+    scrubTo(targetTimeGyr) {
+      const clamped = Math.max(0, Number(targetTimeGyr.toFixed(4)));
+      const savedLog = this.actionLog
+        .filter(a => a.timeGyr <= clamped + 1e-6)
+        .map(a => ({ ...a, _applied: false }));
+      const fullLog = this.actionLog.map(a => ({ ...a, _applied: false }));
+      const savedFocus = { ...this.focus };
+      const savedBranches = this.branches;
+
+      this._initUniverse();
+      this.focus = savedFocus;
+      this.branches = savedBranches;
+      this.actionLog = savedLog;
+
+      if (clamped > 0) {
+        this.step(clamped);
+      }
+      // Retain future actions in log only if user didn't fork; mark applied status properly
+      for (const item of fullLog) {
+        item._applied = item.timeGyr <= clamped + 1e-6;
+      }
+      this.actionLog = fullLog;
+      this._reconcileUniverseAggregates();
+      return this.getStateHash();
+    }
+
+    forkBranch(branchName = '') {
+      const activeLog = this.actionLog
+        .filter(a => a.timeGyr <= this.timeGyr + 1e-6)
+        .map(a => {
+          const copy = { ...a };
+          delete copy._applied;
+          return copy;
+        });
+
+      const branch = {
+        id: this.branches.length + 1,
+        name: branchName || `Branch-${this.branches.length + 1} @ ${this.timeGyr.toFixed(2)} Gyr`,
+        forkTimeGyr: this.timeGyr,
+        seed: this.seedString,
+        constants: { ...this.constants },
+        actionLog: activeLog,
+        snapshotSummary: this.getSummarySnapshot()
+      };
+      this.branches.push(branch);
+      // Truncate any future unapplied actions on current timeline so new meddling diverges cleanly
+      this.actionLog = activeLog.map(a => ({ ...a, _applied: true }));
+      return branch;
+    }
+
+    compareWithBranch(branchIndex = 0, targetTimeGyr = this.timeGyr) {
+      const b = this.branches[branchIndex];
+      if (!b) return null;
+      const simB = new UniverseSimulation({
+        seed: b.seed,
+        constants: b.constants,
+        actionLog: b.actionLog
+      });
+      simB.step(targetTimeGyr);
+      return {
+        current: this.getSummarySnapshot(),
+        branch: simB.getSummarySnapshot(),
+        branchName: b.name,
+        forkTimeGyr: b.forkTimeGyr
+      };
+    }
+
+    // ========================================================================
+    // ZOOM & OBSERVATION LEVEL-OF-DETAIL API
+    // ========================================================================
+
+    setZoomMeters(meters, focusIds = {}) {
+      this.focus.zoomMeters = Math.max(1, Math.min(1e27, meters));
+      if (focusIds.filamentId !== undefined) this.focus.filamentId = focusIds.filamentId;
+      if (focusIds.galaxyId !== undefined) this.focus.galaxyId = focusIds.galaxyId;
+      if (focusIds.starId !== undefined) this.focus.starId = focusIds.starId;
+      if (focusIds.planetId !== undefined) this.focus.planetId = focusIds.planetId;
+
+      // Map meters to nearest scale index
+      let bestIdx = 0;
+      let bestDiff = Infinity;
+      const logM = Math.log10(this.focus.zoomMeters);
+      for (let i = 0; i < SCALES.length; i++) {
+        const d = Math.abs(logM - Math.log10(SCALES[i].meters));
+        if (d < bestDiff) {
+          bestDiff = d;
+          bestIdx = i;
+        }
+      }
+      this.focus.scaleIndex = bestIdx;
+      this._reconcileUniverseAggregates();
+      return this.getObservedLayerState();
+    }
+
+    getFocusedFilament() {
+      return this.filaments[this.focus.filamentId] || this.filaments[0];
+    }
+
+    getFocusedGalaxy() {
+      const f = this.getFocusedFilament();
+      return (f && f.galaxies[this.focus.galaxyId]) || (f && f.galaxies[0]);
+    }
+
+    getFocusedStar() {
+      const g = this.getFocusedGalaxy();
+      return (g && g.stars[this.focus.starId]) || (g && g.stars[0]);
+    }
+
+    getFocusedPlanet() {
+      const s = this.getFocusedStar();
+      return (s && s.planets[this.focus.planetId]) || (s && s.planets[1]) || (s && s.planets[0]);
+    }
+
+    getObservedLayerState() {
+      this._reconcileUniverseAggregates();
+      const f = this.getFocusedFilament();
+      const g = this.getFocusedGalaxy();
+      const s = this.getFocusedStar();
+      const p = this.getFocusedPlanet();
+      return {
+        scale: SCALES[this.focus.scaleIndex],
+        zoomMeters: this.focus.zoomMeters,
+        universeStats: this.stats,
+        filament: f,
+        galaxy: g,
+        star: s,
+        planet: p,
+        creature: this.creature
+      };
+    }
+
+    // ========================================================================
+    // STATE HASHING, SUMMARY & CARTRIDGE SERIALIZATION
+    // ========================================================================
+
+    getStateHash() {
+      this._reconcileUniverseAggregates();
+      const parts = [
+        `seed:${this.seed}`,
+        `t:${qf(this.timeGyr, 4)}`,
+        `step:${this.stepCount}`,
+        `reg:${this.regime}`,
+        `ent:${qf(this.entropyAccumulated, 4)}`,
+        `aln:${qf(this.alignment, 4)}`,
+        `bel:${qf(this.beliefPower, 3)}`,
+        `st:${this.stats.activeStarsCount},${this.stats.habitableWorldsCount},${this.stats.livingWorldsCount},${this.stats.civilizationsCount},${qf(this.stats.totalBiomass, 3)}`,
+        `cr:${qf(this.creature.alignment, 4)},${this.creature.lastAction},${this.creature.totalRewards},${this.creature.totalPunishments}`
+      ];
+      for (const f of this.filaments) {
+        for (const g of f.galaxies) {
+          parts.push(`G${f.id}_${g.id}:${g.morphology},${qf(g.metallicityZ, 5)},${g.stats.activeStarsCount},${g.stats.livingWorldsCount}`);
+          for (const s of g.stars) {
+            parts.push(`S${s.id}:${s.phase},${qf(s.dysonCompletion, 3)}`);
+            for (const p of s.planets) {
+              parts.push(`P${p.id}:${p.type},${p.biosphere.active ? 1 : 0},${p.biosphere.phyloTree.length},${p.civilization ? qf(p.civilization.techLevel, 3) : 0}`);
+            }
+          }
+        }
+      }
+      const canonical = parts.join('|');
+      return fnv1a32(canonical).toString(16).padStart(8, '0');
+    }
+
+    getSummarySnapshot() {
+      this._reconcileUniverseAggregates();
+      const p = this.getFocusedPlanet();
+      return {
+        timeGyr: this.timeGyr,
+        heatDeathGyr: Number(this.heatDeathGyr.toFixed(2)),
+        entropyCostGyr: Number(this.entropyAccumulated.toFixed(2)),
+        era: this.currentEraName,
+        regime: this.regime,
+        alignment: Number(this.alignment.toFixed(3)),
+        beliefPower: Number(this.beliefPower.toFixed(1)),
+        activeStars: this.stats.activeStarsCount,
+        habitableWorlds: this.stats.habitableWorldsCount,
+        livingWorlds: this.stats.livingWorldsCount,
+        civilizations: this.stats.civilizationsCount,
+        totalBiomass: this.stats.totalBiomass,
+        focusedPlanetName: p ? p.name : 'None',
+        focusedPlanetSpecies: p ? p.biosphere.phyloTree.length : 0,
+        focusedCivTech: p && p.civilization ? Number(p.civilization.techLevel.toFixed(2)) : 0,
+        focusedCivStance: p && p.civilization ? p.civilization.religion.stance : 'None',
+        creatureAlignment: Number(this.creature.alignment.toFixed(3)),
+        hash: this.getStateHash()
+      };
+    }
+
+    serializeCartridge() {
+      const cleanLog = this.actionLog
+        .filter(a => a.timeGyr <= this.timeGyr + 1e-6)
+        .map(a => {
+          const copy = { ...a };
+          delete copy._applied;
+          return copy;
+        });
+      const payload = {
+        v: 1,
+        seed: this.seedString,
+        constants: this.constants,
+        timeGyr: this.timeGyr,
+        actionLog: cleanLog
+      };
+      const json = JSON.stringify(payload);
+      if (typeof btoa === 'function') {
+        return btoa(unescape(encodeURIComponent(json)));
+      }
+      return Buffer.from(json, 'utf8').toString('base64');
+    }
+
+    static deserializeCartridge(b64) {
+      let json;
+      if (typeof atob === 'function') {
+        json = decodeURIComponent(escape(atob(b64)));
+      } else {
+        json = Buffer.from(b64, 'base64').toString('utf8');
+      }
+      const data = JSON.parse(json);
+      const sim = new UniverseSimulation({
+        seed: data.seed,
+        constants: data.constants,
+        actionLog: data.actionLog || []
+      });
+      if (data.timeGyr > 0) {
+        sim.step(data.timeGyr);
+      }
+      return sim;
+    }
+  }
+
+  const StellaCore = {
+    PRNG,
+    fnv1a32,
+    mixSeed,
+    CREATION_PRESETS,
+    SCALES,
+    MIRACLE_DEFS,
+    CREATURE_CONTEXTS,
+    CREATURE_ACTIONS,
+    ACTION_VALENCE,
+    GestureRecognizer,
+    AvatarCreature,
+    UniverseSimulation
+  };
+
+  root.StellaCore = StellaCore;
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = StellaCore;
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : (typeof window !== 'undefined' ? window : this));
+/* === STELLA_CORE_END === */
+
+  </script>
+  <script id="stella-ui-app">
+// ============================================================================
+// STELLA MAXIMA — WEBGL2 RENDERER, WEBAUDIO SYNTHESIZER & INTERACTIVE UI
+// ============================================================================
+
+(function () {
+  'use strict';
+
+  const {
+    PRNG,
+    mixSeed,
+    CREATION_PRESETS,
+    SCALES,
+    MIRACLE_DEFS,
+    CREATURE_ACTIONS,
+    ACTION_VALENCE,
+    UniverseSimulation
+  } = window.StellaCore;
+
+  // ==========================================================================
+  // 1. PROCEDURAL WEBAUDIO SYNTHESIZER (ERA + SCALE + ALIGNMENT ADAPTIVE)
+  // ==========================================================================
+
+  class CosmicAudioEngine {
+    constructor() {
+      this.ctx = null;
+      this.muted = false;
+      this.running = false;
+      this.masterGain = null;
+      this.droneOsc1 = null;
+      this.droneOsc2 = null;
+      this.subOsc = null;
+      this.filter = null;
+      this.lfo = null;
+      this.arpTimer = null;
+      this.stepIdx = 0;
+    }
+
+    init() {
+      if (this.ctx) return;
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      this.ctx = new AudioCtx();
+
+      this.masterGain = this.ctx.createGain();
+      this.masterGain.gain.value = 0.14;
+
+      this.filter = this.ctx.createBiquadFilter();
+      this.filter.type = 'lowpass';
+      this.filter.frequency.value = 420;
+      this.filter.Q.value = 2.2;
+
+      this.droneOsc1 = this.ctx.createOscillator();
+      this.droneOsc2 = this.ctx.createOscillator();
+      this.subOsc = this.ctx.createOscillator();
+
+      this.droneOsc1.type = 'sawtooth';
+      this.droneOsc2.type = 'triangle';
+      this.subOsc.type = 'sine';
+
+      this.droneOsc1.frequency.value = 110;
+      this.droneOsc2.frequency.value = 164.81;
+      this.subOsc.frequency.value = 55;
+
+      const droneGain = this.ctx.createGain();
+      droneGain.gain.value = 0.35;
+
+      this.droneOsc1.connect(droneGain);
+      this.droneOsc2.connect(droneGain);
+      this.subOsc.connect(droneGain);
+      droneGain.connect(this.filter);
+      this.filter.connect(this.masterGain);
+      this.masterGain.connect(this.ctx.destination);
+
+      this.droneOsc1.start();
+      this.droneOsc2.start();
+      this.subOsc.start();
+      this.running = true;
+    }
+
+    toggleMute() {
+      if (!this.ctx) {
+        this.init();
+      }
+      this.muted = !this.muted;
+      if (this.masterGain && this.ctx) {
+        this.masterGain.gain.setTargetAtTime(this.muted ? 0.0 : 0.14, this.ctx.currentTime, 0.1);
+      }
+      return this.muted;
+    }
+
+    updateFromSimulation(sim) {
+      if (!this.ctx || !this.running || this.muted) return;
+      const now = this.ctx.currentTime;
+      const align = sim.alignment; // -1..1
+      const scaleIdx = sim.focus.scaleIndex; // 0..8
+
+      // Base pitch shifts higher as we zoom from cosmic web (55 Hz) to creature (146.8 Hz)
+      const roots = [55.0, 65.41, 73.42, 82.41, 98.0, 110.0, 130.81, 146.83, 164.81];
+      const rootFreq = roots[scaleIdx] || 110.0;
+
+      // Alignment interval: Benevolent = Lydian/Major fifth (1.5x), Cruel = Tritone/Phrygian minor second (1.414x or 1.06x)
+      const intervalRatio = align >= 0.15 ? 1.498 : (align <= -0.15 ? 1.4142 : 1.3348);
+
+      this.subOsc.frequency.setTargetAtTime(rootFreq * 0.5, now, 0.4);
+      this.droneOsc1.frequency.setTargetAtTime(rootFreq, now, 0.4);
+      this.droneOsc2.frequency.setTargetAtTime(rootFreq * intervalRatio, now, 0.4);
+
+      const cutoff = 260 + scaleIdx * 95 + (align + 1) * 220;
+      this.filter.frequency.setTargetAtTime(Math.max(120, Math.min(2400, cutoff)), now, 0.3);
+    }
+
+    playMiracleChime(benevolent = true) {
+      if (!this.ctx) this.init();
+      if (!this.ctx || this.muted) return;
+      const now = this.ctx.currentTime;
+      const freqs = benevolent ? [261.63, 329.63, 392.00, 523.25, 659.25] : [220.0, 233.08, 311.13, 155.56];
+      freqs.forEach((f, idx) => {
+        const osc = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        osc.type = benevolent ? 'sine' : 'sawtooth';
+        osc.frequency.setValueAtTime(f, now + idx * 0.06);
+        g.gain.setValueAtTime(0.08, now + idx * 0.06);
+        g.gain.exponentialRampToValueAtTime(0.0008, now + idx * 0.06 + 0.55);
+        osc.connect(g);
+        g.connect(this.masterGain);
+        osc.start(now + idx * 0.06);
+        osc.stop(now + idx * 0.06 + 0.6);
+      });
+    }
+  }
+
+  // ==========================================================================
+  // 2. WEBGL2 MULTI-SCALE & GPU PARTICLE-MESH RENDERER
+  // ==========================================================================
+
+  const VS_FULLSCREEN = `#version 300 es
+  in vec2 a_pos;
+  out vec2 v_uv;
+  void main() {
+    v_uv = a_pos * 0.5 + 0.5;
+    gl_Position = vec4(a_pos, 0.0, 1.0);
+  }`;
+
+  // GPU Particle-Mesh N-body state step shader (render-to-texture ping-pong)
+  const FS_PM_STEP = `#version 300 es
+  precision highp float;
+  in vec2 v_uv;
+  uniform sampler2D u_prevTex;
+  uniform float u_dt;
+  uniform float u_gravity;
+  uniform float u_expansion;
+  uniform float u_lumpiness;
+  out vec4 outColor;
+
+  vec2 hash2(vec2 p) {
+    p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));
+    return -1.0 + 2.0 * fract(sin(p) * 43758.5453123);
+  }
+
+  void main() {
+    vec4 st = texture(u_prevTex, v_uv);
+    vec2 pos = st.xy;
+    vec2 vel = st.zw;
+
+    // 6-halo filamentary attractor potential on GPU
+    vec2 force = vec2(0.0);
+    for (int i = 0; i < 6; i++) {
+      float fi = float(i);
+      float ang = fi * 1.04719755;
+      vec2 center = 0.45 * vec2(cos(ang), sin(ang));
+      vec2 d = center - pos;
+      float r2 = dot(d, d) + 0.025;
+      force += normalize(d) * (u_gravity * u_lumpiness * 0.018) / r2;
+    }
+
+    // Hubble expansion drag / repulsion
+    force += pos * (u_expansion - 1.0) * 0.04;
+    vel = (vel + force * u_dt) * 0.96;
+    pos += vel * u_dt;
+
+    // Toroidal wrap in [-1.1, 1.1]
+    if (pos.x > 1.1) pos.x -= 2.2;
+    if (pos.x < -1.1) pos.x += 2.2;
+    if (pos.y > 1.1) pos.y -= 2.2;
+    if (pos.y < -1.1) pos.y += 2.2;
+
+    outColor = vec4(pos, vel);
+  }`;
+
+  // Main multi-scale procedural universe shader
+  const FS_UNIVERSE = `#version 300 es
+  precision highp float;
+  in vec2 v_uv;
+  uniform vec2 u_res;
+  uniform float u_time;
+  uniform float u_simTimeGyr;
+  uniform float u_scaleIndex;
+  uniform float u_alignment;
+  uniform float u_gravity;
+  uniform float u_expansion;
+  uniform float u_lumpiness;
+  uniform float u_ocean;
+  uniform float u_tempK;
+  uniform float u_starTempK;
+  uniform float u_dyson;
+  uniform float u_biomass;
+  uniform float u_civTech;
+  uniform float u_spiralArms;
+  out vec4 fragColor;
+
+  float hash21(vec2 p) {
+    p = fract(p * vec2(234.34, 435.345));
+    p += dot(p, p + 34.23);
+    return fract(p.x * p.y);
+  }
+
+  float noise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = hash21(i);
+    float b = hash21(i + vec2(1.0, 0.0));
+    float c = hash21(i + vec2(0.0, 1.0));
+    float d = hash21(i + vec2(1.0, 1.0));
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+  }
+
+  float fbm(vec2 p) {
+    float v = 0.0;
+    float a = 0.5;
+    mat2 rot = mat2(0.8, -0.6, 0.6, 0.8);
+    for (int i = 0; i < 5; i++) {
+      v += a * noise(p);
+      p = rot * p * 2.03;
+      a *= 0.5;
+    }
+    return v;
+  }
+
+  // Voronoi tectonic cells for planetary crust
+  vec2 voronoi(vec2 x) {
+    vec2 n = floor(x);
+    vec2 f = fract(x);
+    float m1 = 8.0;
+    float m2 = 8.0;
+    for (int j = -1; j <= 1; j++) {
+      for (int i = -1; i <= 1; i++) {
+        vec2 g = vec2(float(i), float(j));
+        vec2 o = vec2(hash21(n + g), hash21(n + g + vec2(13.1, 7.7)));
+        o = 0.5 + 0.45 * sin(u_simTimeGyr * 0.3 + 6.2831 * o);
+        vec2 r = g + o - f;
+        float d = dot(r, r);
+        if (d < m1) { m2 = m1; m1 = d; }
+        else if (d < m2) { m2 = d; }
+      }
+    }
+    return vec2(sqrt(m1), sqrt(m2) - sqrt(m1));
+  }
+
+  vec3 blackbodyColor(float tempK) {
+    float t = clamp((tempK - 2500.0) / 18000.0, 0.0, 1.0);
+    vec3 cool = vec3(1.0, 0.38, 0.16);
+    vec3 mid = vec3(1.0, 0.95, 0.84);
+    vec3 hot = vec3(0.55, 0.78, 1.0);
+    return t < 0.35 ? mix(cool, mid, t / 0.35) : mix(mid, hot, (t - 0.35) / 0.65);
+  }
+
+  void main() {
+    vec2 uv = (v_uv - 0.5) * 2.0;
+    uv.x *= u_res.x / max(1.0, u_res.y);
+
+    // Alignment tint: benevolent = warm gold/cyan, cruel = crimson/violet
+    vec3 alignTint = mix(
+      vec3(0.95, 0.25, 0.35),
+      vec3(1.0, 0.86, 0.48),
+      clamp(u_alignment * 0.5 + 0.5, 0.0, 1.0)
+    );
+
+    // Crisp sparse background starfield
+    vec2 starCell = floor(v_uv * u_res * 0.22);
+    float sHash = hash21(starCell);
+    float stars = step(0.994, sHash) * (0.4 + 0.6 * sin(u_time * 2.0 + sHash * 100.0));
+    vec3 col = vec3(0.015, 0.024, 0.055) + stars * vec3(0.82, 0.90, 1.0);
+    col += 0.06 * alignTint * fbm(uv * 1.5 + u_time * 0.03);
+
+    int sc = int(floor(u_scaleIndex + 0.5));
+
+    if (sc == 0) {
+      // Scale 0: Primordial Singularity & Quantum Inflation
+      float r = length(uv);
+      float angle = atan(uv.y, uv.x);
+      float wave = fbm(uv * (3.0 + u_lumpiness * 2.0) - u_time * 0.4);
+      float core = exp(-r * (3.2 / max(0.3, u_expansion))) * (1.2 + 0.6 * sin(angle * 6.0 + u_time * 2.0));
+      col += core * mix(vec3(1.0, 0.65, 0.25), vec3(0.45, 0.8, 1.0), wave);
+      col += 0.35 * exp(-abs(r - 0.55 * u_expansion) * 8.0) * alignTint;
+    } else if (sc == 1) {
+      // Scale 1: Cosmic Web Filaments & Halos
+      vec2 p = uv * (2.2 * u_expansion / max(0.3, u_gravity));
+      vec2 v = voronoi(p * 1.6);
+      float filament = smoothstep(0.28, 0.0, v.y) * u_lumpiness;
+      float nodes = smoothstep(0.32, 0.0, v.x) * u_gravity;
+      vec3 webCol = mix(vec3(0.32, 0.52, 0.98), alignTint, 0.38);
+      col += filament * webCol * 0.85 + nodes * vec3(1.0, 0.92, 0.75) * 1.1;
+    } else if (sc == 2) {
+      // Scale 2: Spiral / Elliptical Galaxy
+      float r = length(uv);
+      float a = atan(uv.y, uv.x);
+      float arms = u_spiralArms > 0.5
+        ? pow(0.5 + 0.5 * cos(u_spiralArms * a - 4.8 * log(r + 0.08) + u_time * 0.25), 2.2)
+        : 1.0;
+      float disk = exp(-r * 2.6) * (0.35 + 0.65 * arms);
+      float dust = fbm(uv * 4.5 + vec2(u_time * 0.05));
+      float bulge = exp(-r * 7.5);
+      col += disk * (0.6 + 0.6 * dust) * mix(vec3(0.4, 0.68, 1.0), alignTint, 0.35);
+      col += bulge * vec3(1.0, 0.88, 0.65) * 1.3;
+    } else if (sc == 3) {
+      // Scale 3: Stellar Nursery & Volumetric Nebula
+      float n1 = fbm(uv * 2.2 + u_time * 0.04);
+      float n2 = fbm(uv * 4.4 - u_time * 0.03 + n1);
+      vec3 neb = mix(vec3(0.12, 0.38, 0.72), vec3(0.88, 0.28, 0.52), n1) * n2 * 1.35;
+      col += neb * mix(vec3(1.0), alignTint, 0.3);
+    } else if (sc == 4) {
+      // Scale 4: Planetary System & Dyson Ring
+      float r = length(uv);
+      vec3 sCol = blackbodyColor(u_starTempK);
+      float starGlow = exp(-r * 9.0) * 1.6 + exp(-r * 2.5) * 0.25;
+      col += starGlow * sCol;
+      // Habitable zone soft emerald ring
+      float hzRing = smoothstep(0.12, 0.0, abs(r - 0.52)) * 0.18;
+      col += hzRing * vec3(0.2, 0.9, 0.55);
+      // Dyson swarm ring around star
+      if (u_dyson > 0.01) {
+        float dysonRing = smoothstep(0.025, 0.0, abs(r - 0.16)) * u_dyson;
+        col += dysonRing * vec3(0.3, 0.95, 1.0) * 1.4;
+      }
+    } else if (sc == 5) {
+      // Scale 5: Raymarched 3D Procedural Planet with Voronoi Tectonics, Oceans, Clouds & City Lights
+      float r2 = dot(uv, uv);
+      float radius = 0.66;
+      if (r2 < radius * radius) {
+        float z = sqrt(radius * radius - r2);
+        vec3 norm = normalize(vec3(uv, z));
+        float lon = atan(norm.x, norm.z) + u_time * 0.18;
+        float lat = asin( clamp(norm.y, -1.0, 1.0) );
+        vec2 sphereUV = vec2(lon, lat) * 2.2;
+
+        vec2 tect = voronoi(sphereUV * 1.4);
+        float elev = fbm(sphereUV * 2.5) * 0.75 + (1.0 - tect.x) * 0.35;
+        float seaLevel = clamp(u_ocean, 0.0, 0.92);
+
+        vec3 lightDir = normalize(vec3(0.65, 0.32, 0.68));
+        float ndl = max(0.0, dot(norm, lightDir));
+        float night = smoothstep(0.18, -0.12, dot(norm, lightDir));
+
+        vec3 surfCol;
+        if (elev < seaLevel) {
+          // Ocean with specular highlight
+          vec3 deepSea = vec3(0.03, 0.16, 0.42);
+          vec3 shallowSea = vec3(0.08, 0.48, 0.68);
+          surfCol = mix(deepSea, shallowSea, elev / max(0.01, seaLevel));
+          vec3 halfV = normalize(lightDir + vec3(0.0, 0.0, 1.0));
+          float spec = pow(max(0.0, dot(norm, halfV)), 28.0) * 0.65;
+          surfCol += spec * vec3(1.0, 0.95, 0.85);
+        } else {
+          // Continental crust + biome color from biomass & alignment
+          vec3 rock = mix(vec3(0.45, 0.36, 0.28), vec3(0.28, 0.22, 0.25), clamp(-u_alignment, 0.0, 1.0));
+          vec3 lush = mix(vec3(0.14, 0.58, 0.26), vec3(0.35, 0.72, 0.32), clamp(u_alignment, 0.0, 1.0));
+          float bioFactor = clamp(u_biomass / 25.0, 0.0, 1.0);
+          surfCol = mix(rock, lush, bioFactor);
+          // Tectonic ridge seams
+          if (tect.y < 0.06) {
+            surfCol = mix(surfCol, vec3(0.95, 0.38, 0.12), 0.45);
+          }
+          // Polar ice caps
+          if (abs(norm.y) + elev * 0.25 > 0.88 && u_tempK < 320.0) {
+            surfCol = vec3(0.92, 0.96, 1.0);
+          }
+        }
+
+        // Clouds
+        float clouds = smoothstep(0.52, 0.78, fbm(sphereUV * 3.0 + vec2(u_time * 0.1, 0.0)));
+        surfCol = mix(surfCol, vec3(0.96, 0.98, 1.0), clouds * 0.48);
+
+        vec3 lit = surfCol * (0.08 + 0.92 * ndl);
+
+        // Night-side civilization city lights!
+        if (u_civTech >= 2.0 && elev >= seaLevel) {
+          float cityMask = smoothstep(0.62, 0.75, fbm(sphereUV * 8.0));
+          lit += night * cityMask * min(1.0, u_civTech / 6.0) * vec3(1.0, 0.82, 0.38) * 0.95;
+        }
+
+        // Atmosphere Fresnel rim
+        float rim = pow(1.0 - z / radius, 3.0);
+        lit += rim * mix(vec3(0.28, 0.62, 1.0), alignTint, 0.35) * 0.75;
+        col = lit;
+      } else {
+        // Outer atmospheric halo
+        float distEdge = sqrt(r2) - radius;
+        col += exp(-distEdge * 18.0) * mix(vec3(0.25, 0.58, 1.0), alignTint, 0.3) * 0.55;
+      }
+    } else if (sc == 6) {
+      // Scale 6: Tidal Pool Hydrothermal Chemistry & Biosphere
+      float caustic = fbm(uv * 4.0 + vec2(sin(u_time * 0.4), cos(u_time * 0.3)));
+      vec3 water = mix(vec3(0.03, 0.18, 0.28), vec3(0.08, 0.45, 0.52), caustic);
+      col = mix(water, alignTint * 0.35, 0.18);
+    } else {
+      // Scales 7 & 8: Atmospheric Landscape Backdrop for Civilization & Avatar Creature
+      float skyGrad = clamp(v_uv.y, 0.0, 1.0);
+      vec3 skyTop = mix(vec3(0.05, 0.12, 0.28), alignTint * 0.45, 0.35);
+      vec3 skyBot = mix(vec3(0.18, 0.38, 0.55), alignTint * 0.75, 0.45);
+      col = mix(skyBot, skyTop, skyGrad);
+      float horizon = 0.34 + 0.05 * fbm(vec2(uv.x * 2.5, 1.0));
+      if (v_uv.y < horizon) {
+        vec3 ground = mix(vec3(0.14, 0.34, 0.22), vec3(0.26, 0.16, 0.18), clamp(-u_alignment, 0.0, 1.0));
+        col = ground * (0.6 + 0.4 * fbm(uv * 6.0));
+      }
+    }
+
+    fragColor = vec4(col, 1.0);
+  }`;
+
+  class StellaRenderer {
+    constructor(glCanvas, overlayCanvas) {
+      this.glCanvas = glCanvas;
+      this.overlayCanvas = overlayCanvas;
+      this.ctx2d = overlayCanvas.getContext('2d');
+      this.gl = glCanvas.getContext('webgl2', { antialias: true, preserveDrawingBuffer: true });
+      this.pmSupported = false;
+      this.pmIndex = 0;
+      this.hoveredTarget = null;
+      this.gesturePoints = [];
+      this.particles = [];
+      this.handPos = { x: 0, y: 0, down: false, rightDown: false };
+      this.fps = 60;
+      this._frameTimes = [];
+
+      if (this.gl) {
+        this._initWebGL2();
+      }
+    }
+
+    _compileShader(type, src) {
+      const gl = this.gl;
+      const sh = gl.createShader(type);
+      gl.shaderSource(sh, src);
+      gl.compileShader(sh);
+      if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+        console.warn('Shader compile warning:', gl.getShaderInfoLog(sh));
+        return null;
+      }
+      return sh;
+    }
+
+    _createProgram(vsSrc, fsSrc) {
+      const gl = this.gl;
+      const vs = this._compileShader(gl.VERTEX_SHADER, vsSrc);
+      const fs = this._compileShader(gl.FRAGMENT_SHADER, fsSrc);
+      if (!vs || !fs) return null;
+      const prog = gl.createProgram();
+      gl.attachShader(prog, vs);
+      gl.attachShader(prog, fs);
+      gl.linkProgram(prog);
+      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+        console.warn('Program link warning:', gl.getProgramInfoLog(prog));
+        return null;
+      }
+      return prog;
+    }
+
+    _initWebGL2() {
+      const gl = this.gl;
+      this.mainProg = this._createProgram(VS_FULLSCREEN, FS_UNIVERSE);
+      this.pmProg = this._createProgram(VS_FULLSCREEN, FS_PM_STEP);
+
+      const quad = new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]);
+      this.quadVbo = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.quadVbo);
+      gl.bufferData(gl.ARRAY_BUFFER, quad, gl.STATIC_DRAW);
+
+      // Initialize GPU Render-to-Texture ping-pong buffers (32x32 N-body macro-particles)
+      try {
+        gl.getExtension('EXT_color_buffer_float');
+        this.pmSize = 32;
+        this.pmTex = [gl.createTexture(), gl.createTexture()];
+        this.pmFbo = [gl.createFramebuffer(), gl.createFramebuffer()];
+        const initData = new Float32Array(this.pmSize * this.pmSize * 4);
+        const rng = new PRNG(424242);
+        for (let i = 0; i < this.pmSize * this.pmSize; i++) {
+          initData[i * 4 + 0] = rng.range(-0.9, 0.9);
+          initData[i * 4 + 1] = rng.range(-0.9, 0.9);
+          initData[i * 4 + 2] = rng.range(-0.02, 0.02);
+          initData[i * 4 + 3] = rng.range(-0.02, 0.02);
+        }
+        for (let k = 0; k < 2; k++) {
+          gl.bindTexture(gl.TEXTURE_2D, this.pmTex[k]);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, this.pmSize, this.pmSize, 0, gl.RGBA, gl.FLOAT, initData);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+          gl.bindFramebuffer(gl.FRAMEBUFFER, this.pmFbo[k]);
+          gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.pmTex[k], 0);
+        }
+        if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE) {
+          this.pmSupported = true;
+          this.pmReadback = new Float32Array(this.pmSize * this.pmSize * 4);
+        }
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      } catch (e) {
+        this.pmSupported = false;
+      }
+    }
+
+    resize() {
+      const rect = this.glCanvas.parentElement.getBoundingClientRect();
+      const q = this.qualityScale || 1.0;
+      const w = Math.max(240, Math.floor(rect.width * q));
+      const h = Math.max(180, Math.floor(rect.height * q));
+      if (this.glCanvas.width !== w || this.glCanvas.height !== h) {
+        this.glCanvas.width = w;
+        this.glCanvas.height = h;
+        this.overlayCanvas.width = w;
+        this.overlayCanvas.height = h;
+      }
+    }
+
+    spawnBurst(x, y, color = '#fbbf24', count = 24) {
+      for (let i = 0; i < count; i++) {
+        const a = (i / count) * Math.PI * 2 + Math.random() * 0.3;
+        const sp = 1.5 + Math.random() * 4.5;
+        this.particles.push({
+          x,
+          y,
+          vx: Math.cos(a) * sp,
+          vy: Math.sin(a) * sp,
+          life: 1.0,
+          color
+        });
+      }
+    }
+
+    render(sim, timeSec) {
+      const now = performance.now();
+      this._frameTimes.push(now);
+      while (this._frameTimes.length > 0 && this._frameTimes[0] < now - 1000) {
+        this._frameTimes.shift();
+      }
+      this.fps = Math.min(60, Math.max(1, this._frameTimes.length));
+
+      this.resize();
+      const w = this.glCanvas.width;
+      const h = this.glCanvas.height;
+      const obs = sim.getObservedLayerState();
+
+      // 1. WebGL2 Pass
+      if (this.gl && this.mainProg) {
+        const gl = this.gl;
+
+        // Step GPU Particle-Mesh N-body simulation when on Cosmic Web scale
+        if (this.pmSupported && this.pmProg && sim.focus.scaleIndex <= 1) {
+          const nextIdx = 1 - this.pmIndex;
+          gl.bindFramebuffer(gl.FRAMEBUFFER, this.pmFbo[nextIdx]);
+          gl.viewport(0, 0, this.pmSize, this.pmSize);
+          gl.useProgram(this.pmProg);
+          const posLoc = gl.getAttribLocation(this.pmProg, 'a_pos');
+          gl.bindBuffer(gl.ARRAY_BUFFER, this.quadVbo);
+          gl.enableVertexAttribArray(posLoc);
+          gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, this.pmTex[this.pmIndex]);
+          gl.uniform1i(gl.getUniformLocation(this.pmProg, 'u_prevTex'), 0);
+          gl.uniform1f(gl.getUniformLocation(this.pmProg, 'u_dt'), 0.035);
+          gl.uniform1f(gl.getUniformLocation(this.pmProg, 'u_gravity'), sim.constants.gravity);
+          gl.uniform1f(gl.getUniformLocation(this.pmProg, 'u_expansion'), sim.constants.expansion);
+          gl.uniform1f(gl.getUniformLocation(this.pmProg, 'u_lumpiness'), sim.constants.lumpiness);
+          gl.drawArrays(gl.TRIANGLES, 0, 6);
+          this.pmIndex = nextIdx;
+          gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        }
+
+        gl.viewport(0, 0, w, h);
+        gl.useProgram(this.mainProg);
+        const posLoc = gl.getAttribLocation(this.mainProg, 'a_pos');
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.quadVbo);
+        gl.enableVertexAttribArray(posLoc);
+        gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+        const p = obs.planet;
+        const s = obs.star;
+        const g = obs.galaxy;
+
+        gl.uniform2f(gl.getUniformLocation(this.mainProg, 'u_res'), w, h);
+        gl.uniform1f(gl.getUniformLocation(this.mainProg, 'u_time'), timeSec);
+        gl.uniform1f(gl.getUniformLocation(this.mainProg, 'u_simTimeGyr'), sim.timeGyr);
+        gl.uniform1f(gl.getUniformLocation(this.mainProg, 'u_scaleIndex'), sim.focus.scaleIndex);
+        gl.uniform1f(gl.getUniformLocation(this.mainProg, 'u_alignment'), sim.alignment);
+        gl.uniform1f(gl.getUniformLocation(this.mainProg, 'u_gravity'), sim.constants.gravity);
+        gl.uniform1f(gl.getUniformLocation(this.mainProg, 'u_expansion'), sim.constants.expansion);
+        gl.uniform1f(gl.getUniformLocation(this.mainProg, 'u_lumpiness'), sim.constants.lumpiness);
+        gl.uniform1f(gl.getUniformLocation(this.mainProg, 'u_ocean'), p ? p.oceanCoverage : 0.6);
+        gl.uniform1f(gl.getUniformLocation(this.mainProg, 'u_tempK'), p ? p.surfaceTempK : 288);
+        gl.uniform1f(gl.getUniformLocation(this.mainProg, 'u_starTempK'), s ? s.temperatureK : 5778);
+        gl.uniform1f(gl.getUniformLocation(this.mainProg, 'u_dyson'), s ? s.dysonCompletion : 0.0);
+        gl.uniform1f(gl.getUniformLocation(this.mainProg, 'u_biomass'), p ? p.biosphere.biomass : 0.0);
+        gl.uniform1f(gl.getUniformLocation(this.mainProg, 'u_civTech'), p && p.civilization ? p.civilization.techLevel : 0.0);
+        gl.uniform1f(gl.getUniformLocation(this.mainProg, 'u_spiralArms'), g ? g.arms : 2.0);
+
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+      }
+
+      // 2. Canvas 2D Interactive Entities, Labels, Gesture Trail & God's Hand
+      this._renderOverlay2D(sim, obs, w, h, timeSec);
+    }
+
+    _renderOverlay2D(sim, obs, w, h, timeSec) {
+      const ctx = this.ctx2d;
+      ctx.clearRect(0, 0, w, h);
+      const cx = w * 0.5;
+      const cy = h * 0.5;
+      const minDim = Math.min(w, h);
+      const sc = sim.focus.scaleIndex;
+      this.clickableTargets = [];
+
+      if (sc === 0) {
+        this._drawScale0Singularity(ctx, sim, cx, cy, minDim);
+      } else if (sc === 1) {
+        this._drawScale1CosmicWeb(ctx, sim, cx, cy, minDim);
+      } else if (sc === 2) {
+        this._drawScale2Galaxy(ctx, sim, obs.galaxy, cx, cy, minDim, timeSec);
+      } else if (sc === 3) {
+        this._drawScale3Cluster(ctx, sim, obs.galaxy, cx, cy, minDim);
+      } else if (sc === 4) {
+        this._drawScale4System(ctx, sim, obs.star, cx, cy, minDim, timeSec);
+      } else if (sc === 5) {
+        this._drawScale5PlanetHUD(ctx, sim, obs.planet, cx, cy, minDim);
+      } else if (sc === 6) {
+        this._drawScale6Biosphere(ctx, sim, obs.planet, cx, cy, w, h, timeSec);
+      } else if (sc === 7) {
+        this._drawScale7Civilization(ctx, sim, obs.planet, cx, cy, w, h, timeSec);
+      } else if (sc === 8) {
+        this._drawScale8Creature(ctx, sim, obs.planet, cx, cy, w, h, timeSec);
+      }
+
+      // Render burst particles
+      for (let i = this.particles.length - 1; i >= 0; i--) {
+        const pt = this.particles[i];
+        pt.x += pt.vx;
+        pt.y += pt.vy;
+        pt.life -= 0.03;
+        if (pt.life <= 0) {
+          this.particles.splice(i, 1);
+          continue;
+        }
+        ctx.fillStyle = pt.color;
+        ctx.globalAlpha = Math.max(0, pt.life);
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 3.2 * pt.life, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1.0;
+
+      // Render active gesture miracle stroke trail
+      if (this.gesturePoints.length > 1) {
+        ctx.save();
+        ctx.strokeStyle = sim.alignment >= 0 ? '#fde047' : '#f43f5e';
+        ctx.lineWidth = 3.5;
+        ctx.shadowColor = ctx.strokeStyle;
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.moveTo(this.gesturePoints[0].x, this.gesturePoints[0].y);
+        for (let i = 1; i < this.gesturePoints.length; i++) {
+          ctx.lineTo(this.gesturePoints[i].x, this.gesturePoints[i].y);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Render the Procedural God's Hand cursor in Meddling Mode
+      if (sim.mode === 'meddling' && this.handPos.x > 0 && this.handPos.y > 0) {
+        this._drawGodHand(ctx, this.handPos.x, this.handPos.y, sim.alignment, this.handPos.down || this.handPos.rightDown);
+      }
+    }
+
+    _drawScale0Singularity(ctx, sim, cx, cy, minDim) {
+      ctx.save();
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '600 15px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`PRIMORDIAL FIELD — Regime: ${sim.regime.toUpperCase()}`, cx, cy - minDim * 0.34);
+      ctx.font = '12px monospace';
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText(`Structure Ratio: ${sim.structureRatio.toFixed(2)} | Adjust Creation Dials or Zoom In to Cosmic Web`, cx, cy + minDim * 0.36);
+      ctx.restore();
+    }
+
+    _drawScale1CosmicWeb(ctx, sim, cx, cy, minDim) {
+      ctx.save();
+      // Draw GPU Particle-Mesh N-body dark matter particles if available
+      if (this.pmSupported && this.pmReadback) {
+        ctx.fillStyle = 'rgba(147, 197, 253, 0.38)';
+        const step = 4;
+        for (let i = 0; i < this.pmReadback.length; i += step) {
+          const px = cx + this.pmReadback[i] * minDim * 0.42;
+          const py = cy + this.pmReadback[i + 1] * minDim * 0.42;
+          ctx.fillRect(px, py, 2, 2);
+        }
+      }
+
+      // Draw filament bridges and interactive filament halo nodes
+      ctx.strokeStyle = 'rgba(96, 165, 250, 0.32)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let i = 0; i < sim.filaments.length; i++) {
+        const f1 = sim.filaments[i];
+        const f2 = sim.filaments[(i + 1) % sim.filaments.length];
+        ctx.moveTo(cx + f1.x * minDim * 0.42, cy + f1.y * minDim * 0.42);
+        ctx.lineTo(cx + f2.x * minDim * 0.42, cy + f2.y * minDim * 0.42);
+      }
+      ctx.stroke();
+
+      for (const f of sim.filaments) {
+        const fx = cx + f.x * minDim * 0.42;
+        const fy = cy + f.y * minDim * 0.42;
+        const isSel = f.id === sim.focus.filamentId;
+        const r = isSel ? 18 : 13;
+
+        ctx.beginPath();
+        ctx.arc(fx, fy, r, 0, Math.PI * 2);
+        ctx.fillStyle = isSel ? 'rgba(250, 204, 21, 0.35)' : 'rgba(56, 189, 248, 0.22)';
+        ctx.fill();
+        ctx.lineWidth = isSel ? 2.5 : 1.2;
+        ctx.strokeStyle = isSel ? '#facc15' : '#38bdf8';
+        ctx.stroke();
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = '600 12px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(f.name, fx, fy - r - 6);
+        ctx.font = '11px monospace';
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillText(`★${f.stats.activeStarsCount} Bio:${f.stats.livingWorldsCount} Civ:${f.stats.civilizationsCount}`, fx, fy + r + 13);
+
+        this.clickableTargets.push({
+          x: fx,
+          y: fy,
+          r: r + 8,
+          type: 'filament',
+          filamentId: f.id,
+          nextScaleIndex: 2
+        });
+      }
+      ctx.restore();
+    }
+
+    _drawScale2Galaxy(ctx, sim, gal, cx, cy, minDim, timeSec) {
+      if (!gal) return;
+      ctx.save();
+      const f = sim.getFocusedFilament();
+      // Draw mini galaxy selector tabs at top of canvas
+      if (f) {
+        f.galaxies.forEach((gItem, idx) => {
+          const gx = cx + (idx - 1.5) * 145;
+          const gy = 68;
+          const sel = gItem.id === gal.id;
+          ctx.fillStyle = sel ? 'rgba(250, 204, 21, 0.25)' : 'rgba(15, 23, 42, 0.72)';
+          ctx.strokeStyle = sel ? '#facc15' : '#475569';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.roundRect(gx - 64, gy - 16, 128, 32, 6);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = sel ? '#fef08a' : '#cbd5e1';
+          ctx.font = '600 11px system-ui, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(`${gItem.name} (${gItem.morphology[0]})`, gx, gy + 4);
+          this.clickableTargets.push({
+            x: gx,
+            y: gy,
+            r: 45,
+            type: 'galaxy_tab',
+            galaxyId: gItem.id,
+            nextScaleIndex: 2
+          });
+        });
+      }
+
+      // Draw star sectors orbiting inside the galaxy
+      gal.stars.forEach((st, idx) => {
+        const ang = Math.atan2(st.y, st.x) + timeSec * 0.08;
+        const rad = Math.hypot(st.x, st.y) * minDim * 0.34;
+        const sx = cx + Math.cos(ang) * rad;
+        const sy = cy + Math.sin(ang) * rad;
+        const isSel = st.id === sim.focus.starId;
+
+        ctx.beginPath();
+        ctx.arc(sx, sy, isSel ? 11 : 7, 0, Math.PI * 2);
+        ctx.fillStyle = st.phase === 'RedGiant' ? '#fb7185' : (st.phase === 'MainSequence' ? '#fef08a' : '#93c5fd');
+        ctx.fill();
+        if (isSel) {
+          ctx.strokeStyle = '#facc15';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = '11px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${st.name} (${st.phase})`, sx, sy - 13);
+
+        this.clickableTargets.push({
+          x: sx,
+          y: sy,
+          r: 16,
+          type: 'star',
+          starId: st.id,
+          nextScaleIndex: 4
+        });
+      });
+      ctx.restore();
+    }
+
+    _drawScale3Cluster(ctx, sim, gal, cx, cy, minDim) {
+      if (!gal) return;
+      ctx.save();
+      gal.stars.forEach((st) => {
+        const sx = cx + st.x * minDim * 0.36;
+        const sy = cy + st.y * minDim * 0.34;
+        const isSel = st.id === sim.focus.starId;
+        const r = Math.max(6, Math.min(20, st.massSolar * 3.5));
+
+        const grad = ctx.createRadialGradient(sx, sy, 1, sx, sy, r * 2.2);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.4, st.temperatureK > 7500 ? '#60a5fa' : (st.temperatureK < 4200 ? '#f87171' : '#fde047'));
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(sx, sy, r * 2.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (isSel) {
+          ctx.strokeStyle = '#facc15';
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.arc(sx, sy, r * 2.4, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = '600 11px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${st.name} [${st.massSolar.toFixed(1)}M☉ | Z=${st.metallicityZ.toFixed(3)}]`, sx, sy + r * 2.2 + 12);
+
+        this.clickableTargets.push({
+          x: sx,
+          y: sy,
+          r: r * 2.4,
+          type: 'star',
+          starId: st.id,
+          nextScaleIndex: 4
+        });
+      });
+      ctx.restore();
+    }
+
+    _drawScale4System(ctx, sim, star, cx, cy, minDim, timeSec) {
+      if (!star) return;
+      ctx.save();
+      const maxAU = star.planets[star.planets.length - 1].orbitAU * 1.15;
+
+      // Draw orbits & planets
+      star.planets.forEach((pl, idx) => {
+        const rPx = (0.14 + 0.31 * (Math.log(1 + pl.orbitAU) / Math.log(1 + maxAU))) * minDim;
+        ctx.beginPath();
+        ctx.arc(cx, cy, rPx, 0, Math.PI * 2);
+        ctx.strokeStyle = pl.inHabitableZone ? 'rgba(52, 211, 153, 0.45)' : 'rgba(148, 163, 184, 0.22)';
+        ctx.lineWidth = pl.inHabitableZone ? 2.2 : 1.0;
+        ctx.stroke();
+
+        const ang = timeSec * (0.45 / Math.pow(pl.orbitAU, 0.75)) + idx * 1.3;
+        const px = cx + Math.cos(ang) * rPx;
+        const py = cy + Math.sin(ang) * rPx;
+        const pRad = pl.type === 'Gas Giant' ? 11 : 7;
+        const isSel = pl.id === sim.focus.planetId;
+
+        ctx.beginPath();
+        ctx.arc(px, py, pRad, 0, Math.PI * 2);
+        ctx.fillStyle = pl.biosphere.active
+          ? '#10b981'
+          : (pl.inHabitableZone ? '#38bdf8' : (pl.type === 'Gas Giant' ? '#f59e0b' : '#94a3b8'));
+        ctx.fill();
+
+        if (isSel) {
+          ctx.strokeStyle = '#fde047';
+          ctx.lineWidth = 2.2;
+          ctx.beginPath();
+          ctx.arc(px, py, pRad + 5, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = '11px monospace';
+        ctx.textAlign = 'center';
+        const tag = pl.civilization && !pl.civilization.collapsed
+          ? ` ★Civ(T${Math.floor(pl.civilization.techLevel)})`
+          : (pl.biosphere.active ? ' 🌿Life' : '');
+        ctx.fillText(`${pl.name} (${pl.orbitAU}AU)${tag}`, px, py - pRad - 8);
+
+        this.clickableTargets.push({
+          x: px,
+          y: py,
+          r: pRad + 10,
+          type: 'planet',
+          planetId: pl.id,
+          nextScaleIndex: 5
+        });
+      });
+      ctx.restore();
+    }
+
+    _drawScale5PlanetHUD(ctx, sim, planet, cx, cy, minDim) {
+      if (!planet) return;
+      ctx.save();
+      const rGlobe = minDim * 0.33;
+      ctx.fillStyle = 'rgba(2, 6, 23, 0.78)';
+      ctx.beginPath();
+      ctx.roundRect(cx - 170, cy - rGlobe - 42, 340, 26, 6);
+      ctx.roundRect(cx - 280, cy + rGlobe + 8, 560, 26, 6);
+      ctx.fill();
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '600 14px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${planet.name} — ${planet.type}`, cx, cy - rGlobe - 24);
+      ctx.font = '12px monospace';
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillText(
+        `Temp: ${planet.surfaceTempK.toFixed(0)}K | Oceans: ${(planet.oceanCoverage * 100).toFixed(0)}% | Plates: ${planet.plates.length} | Biomass: ${planet.biosphere.biomass.toFixed(1)} | Craters: ${planet.impactCraters}`,
+        cx,
+        cy + rGlobe + 25
+      );
+      ctx.restore();
+    }
+
+    _drawScale6Biosphere(ctx, sim, planet, cx, cy, w, h, timeSec) {
+      if (!planet) return;
+      ctx.save();
+      const chem = planet.chemistry;
+      const bio = planet.biosphere;
+      const rng = new PRNG(planet.seed);
+
+      // Draw floating monomers, polymers, and dividing protocells / organisms
+      const numCells = Math.max(8, Math.min(45, Math.floor(chem.monomers * 18 + bio.phyloTree.length * 3)));
+      for (let i = 0; i < numCells; i++) {
+        const bx = (0.12 + 0.76 * rng.next()) * w + Math.sin(timeSec * 0.8 + i) * 26;
+        const by = (0.18 + 0.66 * rng.next()) * h + Math.cos(timeSec * 0.7 + i * 1.3) * 20;
+        const isMulti = bio.multicellular && (i % 3 === 0);
+        const rad = isMulti ? 16 : (chem.selfReplicating ? 10 : 5);
+
+        ctx.beginPath();
+        ctx.arc(bx, by, rad, 0, Math.PI * 2);
+        ctx.fillStyle = bio.active
+          ? (isMulti ? 'rgba(52, 211, 153, 0.55)' : 'rgba(56, 189, 248, 0.48)')
+          : 'rgba(251, 191, 36, 0.38)';
+        ctx.fill();
+        ctx.strokeStyle = bio.active ? '#6ee7b7' : '#fde047';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Draw internal genome strand if self-replicating
+        if (chem.selfReplicating) {
+          ctx.beginPath();
+          ctx.arc(bx, by, rad * 0.45, 0, Math.PI * 2);
+          ctx.fillStyle = '#fef08a';
+          ctx.fill();
+        }
+      }
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '600 14px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(
+        `${planet.name} Tidal Pool & Biosphere — ${bio.active ? `Active Evolution (${bio.biodiversity} extant species)` : 'Prebiotic Chemistry Soup'}`,
+        cx,
+        58
+      );
+      ctx.restore();
+    }
+
+    _drawScale7Civilization(ctx, sim, planet, cx, cy, w, h, timeSec) {
+      if (!planet) return;
+      ctx.save();
+      const civ = planet.civilization;
+      const horizonY = h * 0.66;
+
+      if (!civ || civ.collapsed) {
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = '600 15px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(
+          civ && civ.collapsed
+            ? `Ruins of ${civ.name} — Civilization Collapsed`
+            : `No Sapient Civilization on ${planet.name} Yet (Cast [Inspire] or Fast-Forward Evolution)`,
+          cx,
+          cy
+        );
+        ctx.restore();
+        return;
+      }
+
+      // Draw procedural buildings matching architectureStyle & techLevel
+      const count = Math.min(18, civ.settlements + 3);
+      for (let i = 0; i < count; i++) {
+        const bx = w * 0.12 + (i / Math.max(1, count - 1)) * (w * 0.76);
+        const bw = 26 + (i % 3) * 10;
+        const bh = 35 + ((i * 17) % 65) * (0.6 + civ.techLevel * 0.15);
+
+        ctx.fillStyle = sim.alignment >= 0 ? '#eab308' : '#9f1239';
+        ctx.strokeStyle = '#f8fafc';
+        ctx.lineWidth = 1.2;
+
+        if (civ.architectureStyle.includes('Domes')) {
+          ctx.beginPath();
+          ctx.arc(bx, horizonY, bw * 0.8, Math.PI, 0);
+          ctx.fill();
+          ctx.stroke();
+        } else {
+          ctx.fillRect(bx - bw * 0.5, horizonY - bh, bw, bh);
+          ctx.strokeRect(bx - bw * 0.5, horizonY - bh, bw, bh);
+        }
+
+        // Lit windows
+        ctx.fillStyle = '#fef08a';
+        for (let wy = horizonY - bh + 8; wy < horizonY - 8; wy += 12) {
+          ctx.fillRect(bx - 4, wy, 8, 5);
+        }
+      }
+
+      // Temple of Belief in center
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '600 14px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(
+        `${civ.name} (Tech ${civ.techLevel.toFixed(1)} | ${civ.architectureStyle}) — Religion: "${civ.religion.deityTitle}" [${civ.religion.stance}]`,
+        cx,
+        56
+      );
+
+      if (civ.noticedGod && civ.messagesToGod.length > 0) {
+        const latest = civ.messagesToGod[civ.messagesToGod.length - 1].message;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.roundRect(cx - Math.min(360, w * 0.42), 75, Math.min(720, w * 0.84), 44, 8);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#7dd3fc';
+        ctx.font = 'italic 12px system-ui, sans-serif';
+        ctx.fillText(latest.slice(0, 115) + (latest.length > 115 ? '...' : ''), cx, 101);
+      }
+
+      ctx.restore();
+    }
+
+    _drawScale8Creature(ctx, sim, planet, cx, cy, w, h, timeSec) {
+      ctx.save();
+      const cr = sim.creature;
+      const align = cr.alignment; // -1..1
+      const groundY = h * 0.68;
+      const bob = Math.sin(timeSec * 3.0) * 6;
+      const bodyX = cx + Math.sin(timeSec * 0.7) * 45;
+      const bodyY = groundY - 58 + bob;
+      const scale = Math.min(1.6, 0.85 + cr.size * 0.22);
+
+      // Aura / Halo
+      ctx.save();
+      ctx.translate(bodyX, bodyY);
+      ctx.scale(scale, scale);
+
+      if (align >= 0.1) {
+        // Golden Halo & Wings
+        ctx.strokeStyle = '#fde047';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(0, -58, 24, 7, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (align <= -0.1) {
+        // Jagged Obsidian Horns
+        ctx.fillStyle = '#f43f5e';
+        ctx.beginPath();
+        ctx.moveTo(-18, -36);
+        ctx.lineTo(-32, -64);
+        ctx.lineTo(-8, -42);
+        ctx.moveTo(18, -36);
+        ctx.lineTo(32, -64);
+        ctx.lineTo(8, -42);
+        ctx.fill();
+      }
+
+      // Procedural articulated torso & head
+      ctx.fillStyle = align >= 0.15 ? '#fbbf24' : (align <= -0.15 ? '#be123c' : '#38bdf8');
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 2;
+
+      // Articulated Legs & Arms
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 5;
+      const swing = Math.sin(timeSec * 4.0) * 10;
+      ctx.beginPath();
+      // Legs
+      ctx.moveTo(-14, 38); ctx.lineTo(-18 + swing * 0.5, 68);
+      ctx.moveTo(14, 38); ctx.lineTo(18 - swing * 0.5, 68);
+      // Arms
+      ctx.moveTo(-26, 2); ctx.lineTo(-48, -12 + swing);
+      ctx.moveTo(26, 2); ctx.lineTo(48, -12 - swing);
+      ctx.stroke();
+
+      // Torso
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(0, 8, 30, 38, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Belly glyph
+      ctx.strokeStyle = align >= 0 ? '#fef08a' : '#fda4af';
+      ctx.beginPath();
+      ctx.arc(0, 10, 14, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Head
+      ctx.strokeStyle = '#f8fafc';
+      ctx.beginPath();
+      ctx.arc(0, -32, 22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Eyes & Mouth
+      ctx.fillStyle = align < -0.15 ? '#fef08a' : '#0f172a';
+      ctx.beginPath();
+      ctx.arc(-8, -35, 3.8, 0, Math.PI * 2);
+      ctx.arc(8, -35, 3.8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      if (align >= 0) {
+        ctx.arc(0, -27, 7, 0.15 * Math.PI, 0.85 * Math.PI);
+      } else {
+        ctx.arc(0, -22, 7, 1.15 * Math.PI, 1.85 * Math.PI);
+      }
+      ctx.stroke();
+
+      ctx.restore();
+
+      // Surrounding Beach Shoreline, Flora, Village Huts & Villagers
+      for (let i = 0; i < 6; i++) {
+        const vx = w * 0.14 + i * (w * 0.14);
+        if (Math.abs(vx - bodyX) < 75) continue;
+        // Village hut or tree
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(vx - 16, groundY - 26, 32, 26);
+        ctx.fillStyle = sim.alignment >= 0 ? '#eab308' : '#e11d48';
+        ctx.beginPath();
+        ctx.moveTo(vx - 22, groundY - 26);
+        ctx.lineTo(vx, groundY - 46);
+        ctx.lineTo(vx + 22, groundY - 26);
+        ctx.fill();
+        // Little villager figure
+        const vwx = vx + 28 + Math.sin(timeSec * 2 + i) * 8;
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.arc(vwx, groundY - 18, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillRect(vwx - 3, groundY - 13, 6, 13);
+      }
+
+      // Thought & Action bubble above creature
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.86)';
+      ctx.strokeStyle = align >= 0 ? '#facc15' : '#f43f5e';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(bodyX - 135, bodyY - 125 * scale, 270, 46, 10);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '600 12px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${cr.name} (${cr.speciesArchetype})`, bodyX, bodyY - 125 * scale + 18);
+      ctx.font = '11px monospace';
+      ctx.fillStyle = '#fde047';
+      ctx.fillText(`Action: ${cr.lastAction} | Align: ${cr.alignment.toFixed(2)}`, bodyX, bodyY - 125 * scale + 36);
+
+      this.clickableTargets.push({
+        x: bodyX,
+        y: bodyY,
+        r: 65,
+        type: 'creature'
+      });
+      ctx.restore();
+    }
+
+    _drawGodHand(ctx, x, y, alignment, isClosed) {
+      ctx.save();
+      ctx.translate(x, y);
+      const col = alignment >= 0.1 ? '#fde047' : (alignment <= -0.1 ? '#f43f5e' : '#38bdf8');
+      ctx.strokeStyle = col;
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
+      ctx.lineWidth = 2.2;
+      ctx.shadowColor = col;
+      ctx.shadowBlur = 10;
+
+      // Palm + 4 stylized fingers
+      ctx.beginPath();
+      ctx.arc(0, 4, isClosed ? 9 : 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      const fingerLen = isClosed ? 7 : 15;
+      for (let i = -1.5; i <= 1.5; i += 1.0) {
+        const ang = i * 0.35 - Math.PI * 0.5;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(ang) * 10, Math.sin(ang) * 10);
+        ctx.lineTo(Math.cos(ang) * (10 + fingerLen), Math.sin(ang) * (10 + fingerLen));
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
+  // ==========================================================================
+  // 3. APPLICATION CONTROLLER & UI BINDINGS
+  // ==========================================================================
+
+  class StellaMaximaApp {
+    constructor() {
+      this.sim = new UniverseSimulation({ seed: 'STELLA-2026' });
+      this.audio = new CosmicAudioEngine();
+      this.playing = true;
+      this.simSpeedGyrPerSec = 0.25; // Adjustable speed
+      this.activeTab = 'inspector'; // 'inspector' | 'hr' | 'phylo' | 'creature' | 'chronicle' | 'branches' | 'howitworks'
+      this.handTool = 'gesture'; // 'gesture' | 'stroke' | 'slap' | 'cradle' | 'asteroid'
+      this.lastFrameTime = performance.now();
+      this.lastUiUpdate = 0;
+
+      this._initDOM();
+      this._bindEvents();
+      // Advance a tiny bit at start so cosmic dawn is visible immediately
+      this.sim.step(0.2);
+      this.updateAllUI(true);
+      this._startLoop();
+    }
+
+    _initDOM() {
+      this.glCanvas = document.getElementById('gl-canvas');
+      this.overlayCanvas = document.getElementById('overlay-canvas');
+      this.renderer = new StellaRenderer(this.glCanvas, this.overlayCanvas);
+    }
+
+    _bindEvents() {
+      // Mode Switch (Contemplative vs Meddling)
+      document.getElementById('btn-mode-toggle').addEventListener('click', () => {
+        this.audio.init();
+        this.sim.mode = this.sim.mode === 'contemplative' ? 'meddling' : 'contemplative';
+        this.updateAllUI(true);
+      });
+
+      // Play / Pause & Step
+      document.getElementById('btn-play-pause').addEventListener('click', () => {
+        this.audio.init();
+        this.playing = !this.playing;
+        this.updateAllUI(true);
+      });
+
+      document.getElementById('btn-step-forward').addEventListener('click', () => {
+        this.audio.init();
+        this.sim.step(0.4);
+        this.updateAllUI(true);
+      });
+
+      // Speed selector
+      document.getElementById('select-speed').addEventListener('change', (e) => {
+        this.simSpeedGyrPerSec = parseFloat(e.target.value) || 0.25;
+      });
+
+      // Quality selector (degrades gracefully on weak hardware)
+      const qSel = document.getElementById('select-quality');
+      if (qSel) {
+        qSel.addEventListener('change', (e) => {
+          this.renderer.qualityScale = parseFloat(e.target.value) || 1.0;
+          this.renderer.resize();
+          this.renderer.render(this.sim, performance.now() / 1000);
+        });
+      }
+
+      // Audio Mute toggle
+      document.getElementById('btn-audio-toggle').addEventListener('click', () => {
+        const muted = this.audio.toggleMute();
+        document.getElementById('btn-audio-toggle').textContent = muted ? '🔇 Audio Off' : '🔊 Audio On';
+      });
+
+      // Continuous Zoom Slider & Scale Buttons
+      const zoomSlider = document.getElementById('slider-zoom');
+      zoomSlider.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value); // 0..8 continuous
+        const idx = Math.round(val);
+        const meters = SCALES[idx] ? SCALES[idx].meters : 1e24;
+        this.sim.setZoomMeters(meters);
+        this.updateAllUI(true);
+      });
+
+      document.querySelectorAll('[data-scale-idx]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.getAttribute('data-scale-idx'), 10);
+          zoomSlider.value = String(idx);
+          this.sim.setZoomMeters(SCALES[idx].meters);
+          this.updateAllUI(true);
+        });
+      });
+
+      // Wheel zoom on canvas
+      this.overlayCanvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const dir = e.deltaY > 0 ? -1 : 1; // scroll up zooms in (higher index)
+        const nextIdx = Math.max(0, Math.min(8, this.sim.focus.scaleIndex + dir));
+        zoomSlider.value = String(nextIdx);
+        this.sim.setZoomMeters(SCALES[nextIdx].meters);
+        this.updateAllUI(true);
+      }, { passive: false });
+
+      // Canvas Pointer interaction (Click to focus / Hand / Draw Gesture Miracle)
+      this.overlayCanvas.addEventListener('pointerdown', (e) => {
+        this.audio.init();
+        const rect = this.overlayCanvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        this.renderer.handPos.x = x;
+        this.renderer.handPos.y = y;
+        this.renderer.handPos.down = true;
+
+        if (this.sim.mode === 'meddling' && this.handTool === 'gesture') {
+          this.renderer.gesturePoints = [{ x, y }];
+        }
+      });
+
+      this.overlayCanvas.addEventListener('pointermove', (e) => {
+        const rect = this.overlayCanvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        this.renderer.handPos.x = x;
+        this.renderer.handPos.y = y;
+        if (this.renderer.handPos.down && this.sim.mode === 'meddling' && this.handTool === 'gesture') {
+          this.renderer.gesturePoints.push({ x, y });
+        }
+      });
+
+      window.addEventListener('pointerup', (e) => {
+        if (!this.renderer.handPos.down) return;
+        this.renderer.handPos.down = false;
+        const pts = this.renderer.gesturePoints;
+        this.renderer.gesturePoints = [];
+
+        // Check if user drew a miracle gesture
+        if (this.sim.mode === 'meddling' && this.handTool === 'gesture' && pts.length >= 6) {
+          const pathLen = this.sim.gestureRecognizer.pathLength(pts);
+          if (pathLen > 36) {
+            const rec = this.sim.gestureRecognizer.recognize(pts);
+            this._triggerMiracleWithFeedback(rec.id, pts[pts.length - 1].x, pts[pts.length - 1].y, `Gesture "${rec.miracle.gestureName}" (${Math.round(rec.score * 100)}%)`);
+            return;
+          }
+        }
+
+        // Otherwise check if user clicked a target on the canvas
+        const x = this.renderer.handPos.x;
+        const y = this.renderer.handPos.y;
+        if (this.sim.mode === 'meddling' && this.handTool !== 'gesture') {
+          this._applyDirectHandTool(x, y);
+          return;
+        }
+
+        for (const t of (this.renderer.clickableTargets || [])) {
+          if (Math.hypot(x - t.x, y - t.y) <= t.r) {
+            if (t.filamentId !== undefined) this.sim.focus.filamentId = t.filamentId;
+            if (t.galaxyId !== undefined) this.sim.focus.galaxyId = t.galaxyId;
+            if (t.starId !== undefined) this.sim.focus.starId = t.starId;
+            if (t.planetId !== undefined) this.sim.focus.planetId = t.planetId;
+            if (t.nextScaleIndex !== undefined) {
+              this.sim.setZoomMeters(SCALES[t.nextScaleIndex].meters);
+              document.getElementById('slider-zoom').value = String(t.nextScaleIndex);
+            }
+            this.updateAllUI(true);
+            break;
+          }
+        }
+      });
+
+      // Hand Tool buttons
+      document.querySelectorAll('[data-hand-tool]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          this.sim.mode = 'meddling';
+          this.handTool = btn.getAttribute('data-hand-tool');
+          this.updateAllUI(true);
+        });
+      });
+
+      // Direct Miracle cast buttons (also supports gesture drawing)
+      document.querySelectorAll('[data-cast-miracle]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          this.audio.init();
+          this.sim.mode = 'meddling';
+          const mId = btn.getAttribute('data-cast-miracle');
+          this._triggerMiracleWithFeedback(
+            mId,
+            this.overlayCanvas.width * 0.5,
+            this.overlayCanvas.height * 0.5,
+            'Direct Invocation'
+          );
+        });
+      });
+
+      // Timeline Scrubber & Fork Branch
+      const timeScrubber = document.getElementById('slider-timeline');
+      timeScrubber.addEventListener('input', (e) => {
+        const targetGyr = parseFloat(e.target.value);
+        this.playing = false;
+        this.sim.scrubTo(targetGyr);
+        this.updateAllUI(true);
+      });
+
+      document.getElementById('btn-fork-timeline').addEventListener('click', () => {
+        const b = this.sim.forkBranch();
+        this.showToast(`Forked Timeline: ${b.name}`);
+        this.activeTab = 'branches';
+        this.updateAllUI(true);
+      });
+
+      // Sidebar Navigation Tabs
+      document.querySelectorAll('[data-panel-tab]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          this.activeTab = btn.getAttribute('data-panel-tab');
+          this.updateAllUI(true);
+        });
+      });
+
+      // Creation Modal Open/Close & Apply
+      document.getElementById('btn-open-creation').addEventListener('click', () => {
+        document.getElementById('modal-creation').classList.remove('hidden');
+      });
+      document.getElementById('btn-close-creation').addEventListener('click', () => {
+        document.getElementById('modal-creation').classList.add('hidden');
+      });
+
+      // Preset selector inside Creation Modal
+      document.getElementById('select-preset').addEventListener('change', (e) => {
+        const key = e.target.value;
+        const p = CREATION_PRESETS[key];
+        if (!p) return;
+        document.getElementById('dial-gravity').value = p.gravity;
+        document.getElementById('dial-expansion').value = p.expansion;
+        document.getElementById('dial-lumpiness').value = p.lumpiness;
+        document.getElementById('dial-darkmatter').value = p.darkMatter;
+        document.getElementById('dial-chemistry').value = p.chemistryRichness;
+        document.getElementById('dial-stareff').value = p.starEfficiency;
+        document.getElementById('preset-desc').textContent = p.description;
+        this._syncDialLabels();
+      });
+
+      ['dial-gravity', 'dial-expansion', 'dial-lumpiness', 'dial-darkmatter', 'dial-chemistry', 'dial-stareff'].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => this._syncDialLabels());
+      });
+
+      document.getElementById('btn-ignite-big-bang').addEventListener('click', () => {
+        const seedVal = document.getElementById('input-seed').value.trim() || 'STELLA-2026';
+        const constants = {
+          gravity: parseFloat(document.getElementById('dial-gravity').value),
+          expansion: parseFloat(document.getElementById('dial-expansion').value),
+          lumpiness: parseFloat(document.getElementById('dial-lumpiness').value),
+          darkMatter: parseFloat(document.getElementById('dial-darkmatter').value),
+          chemistryRichness: parseFloat(document.getElementById('dial-chemistry').value),
+          starEfficiency: parseFloat(document.getElementById('dial-stareff').value)
+        };
+        this.sim = new UniverseSimulation({ seed: seedVal, constants });
+        this.sim.step(0.2);
+        document.getElementById('modal-creation').classList.add('hidden');
+        this.showToast(`Big Bang ignited with seed "${seedVal}" (${this.sim.regime} regime)`);
+        this.updateAllUI(true);
+      });
+
+      // Export Chronicle, Shareable String & Standalone HTML Cartridge
+      document.getElementById('btn-export-chronicle').addEventListener('click', () => {
+        const lines = this.sim.chronicle.map(c => `[Year ${c.timeGyr.toFixed(3)} Gyr] (${c.category.toUpperCase()}) ${c.text}`);
+        const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `stella-maxima-chronicle-${this.sim.seedString}.txt`;
+        a.click();
+        this.showToast('Exported Chronicle log (.txt)');
+      });
+
+      document.getElementById('btn-share-string').addEventListener('click', () => {
+        const code = this.sim.serializeCartridge();
+        window.location.hash = `cartridge=${code}`;
+        try {
+          navigator.clipboard.writeText(code);
+        } catch (err) {
+          // Fallback
+        }
+        this.showToast(`Copied universe state string (${code.length} chars) & updated URL hash!`);
+      });
+
+      document.getElementById('btn-export-cartridge').addEventListener('click', () => {
+        const code = this.sim.serializeCartridge();
+        const htmlSource = document.documentElement.outerHTML.replace(
+          'window.__INITIAL_CARTRIDGE__ = null;',
+          `window.__INITIAL_CARTRIDGE__ = "${code}";`
+        );
+        const blob = new Blob(['<!DOCTYPE html>\n' + htmlSource], { type: 'text/html;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `stella-maxima-cartridge-${this.sim.seedString}.html`;
+        a.click();
+        this.showToast('Exported standalone HTML Universe Cartridge!');
+      });
+
+      // Load cartridge from hash or embedded cartridge if present
+      if (window.__INITIAL_CARTRIDGE__) {
+        try {
+          this.sim = UniverseSimulation.deserializeCartridge(window.__INITIAL_CARTRIDGE__);
+        } catch (e) {}
+      } else if (window.location.hash.startsWith('#cartridge=')) {
+        try {
+          const b64 = window.location.hash.replace('#cartridge=', '');
+          this.sim = UniverseSimulation.deserializeCartridge(b64);
+        } catch (e) {}
+      }
+    }
+
+    _syncDialLabels() {
+      document.getElementById('val-gravity').textContent = parseFloat(document.getElementById('dial-gravity').value).toFixed(2);
+      document.getElementById('val-expansion').textContent = parseFloat(document.getElementById('dial-expansion').value).toFixed(2);
+      document.getElementById('val-lumpiness').textContent = parseFloat(document.getElementById('dial-lumpiness').value).toFixed(2);
+      document.getElementById('val-darkmatter').textContent = parseFloat(document.getElementById('dial-darkmatter').value).toFixed(2);
+      document.getElementById('val-chemistry').textContent = parseFloat(document.getElementById('dial-chemistry').value).toFixed(2);
+      document.getElementById('val-stareff').textContent = parseFloat(document.getElementById('dial-stareff').value).toFixed(2);
+    }
+
+    _applyDirectHandTool(x, y) {
+      let handAction = 'stroke_creature';
+      let msg = 'Stroked the Avatar Creature (+Reward)';
+      if (this.handTool === 'stroke') {
+        handAction = 'stroke_creature';
+        msg = `Stroked ${this.sim.creature.name}: reinforced "${this.sim.creature.lastAction}"`;
+      } else if (this.handTool === 'slap') {
+        handAction = 'slap_creature';
+        msg = `Slapped ${this.sim.creature.name}: punished "${this.sim.creature.lastAction}"`;
+      } else if (this.handTool === 'cradle') {
+        handAction = 'cradle_planet';
+        msg = 'Cradled world in warm gravity (stabilized climate)';
+      } else if (this.handTool === 'asteroid') {
+        handAction = 'throw_asteroid';
+        msg = 'Hurled kinetic asteroid with the Hand!';
+      }
+      this.sim.interactHand(handAction);
+      this.renderer.spawnBurst(x, y, handAction === 'slap_creature' || handAction === 'throw_asteroid' ? '#f43f5e' : '#34d399', 24);
+      this.audio.playMiracleChime(handAction === 'stroke_creature' || handAction === 'cradle_planet');
+      this.showToast(msg);
+      this.updateAllUI(true);
+    }
+
+    _triggerMiracleWithFeedback(miracleId, x, y, sourceLabel) {
+      const res = this.sim.castMiracle(miracleId);
+      if (res && res.ok) {
+        const m = res.miracle;
+        this.renderer.spawnBurst(x, y, m.benevolent ? '#fde047' : '#f43f5e', 34);
+        this.audio.playMiracleChime(m.benevolent);
+        const sign = m.entropyCost >= 0 ? `+${m.entropyCost.toFixed(2)}` : `${m.entropyCost.toFixed(2)}`;
+        this.showToast(`${sourceLabel}: Cast [${m.name}] (Entropy ΔS: ${sign} Gyr)`);
+        this.updateAllUI(true);
+      }
+    }
+
+    showToast(text) {
+      const el = document.getElementById('toast-banner');
+      if (!el) return;
+      el.textContent = text;
+      el.classList.remove('opacity-0');
+      clearTimeout(this._toastTimer);
+      this._toastTimer = setTimeout(() => {
+        el.classList.add('opacity-0');
+      }, 3400);
+    }
+
+    updateAllUI(force = false) {
+      const now = performance.now();
+      if (!force && now - this.lastUiUpdate < 220) return;
+      this.lastUiUpdate = now;
+
+      const sim = this.sim;
+      const obs = sim.getObservedLayerState();
+
+      // Top status bar
+      document.getElementById('hud-time').textContent = `${sim.timeGyr.toFixed(2)} Gyr`;
+      document.getElementById('hud-heatdeath').textContent = `${sim.heatDeathGyr.toFixed(2)} Gyr`;
+      document.getElementById('hud-entropy').textContent = `${sim.entropyAccumulated >= 0 ? '+' : ''}${sim.entropyAccumulated.toFixed(2)} Gyr`;
+      document.getElementById('hud-era').textContent = sim.currentEraName;
+      document.getElementById('hud-scale-name').textContent = `${obs.scale.name} (${obs.scale.unit})`;
+      document.getElementById('hud-belief').textContent = sim.beliefPower.toFixed(0);
+      document.getElementById('hud-alignment').textContent = sim.alignment >= 0.15
+        ? `Benevolent (+${sim.alignment.toFixed(2)})`
+        : (sim.alignment <= -0.15 ? `Cruel (${sim.alignment.toFixed(2)})` : `Neutral (${sim.alignment.toFixed(2)})`);
+      document.getElementById('hud-fps').textContent = `${this.renderer.fps} FPS`;
+
+      // Mode & Play buttons
+      const modeBtn = document.getElementById('btn-mode-toggle');
+      if (sim.mode === 'meddling') {
+        modeBtn.textContent = '🖐️ Meddling Mode (Active God)';
+        modeBtn.className = 'px-3 py-1.5 rounded text-xs font-semibold bg-amber-500 text-slate-950 shadow transition';
+      } else {
+        modeBtn.textContent = '👁️ Contemplative Mode (Observer)';
+        modeBtn.className = 'px-3 py-1.5 rounded text-xs font-semibold bg-slate-800 text-sky-300 border border-sky-500/40 transition';
+      }
+
+      document.getElementById('btn-play-pause').textContent = this.playing ? '⏸ Pause' : '▶ Play';
+
+      // Timeline slider sync
+      const tSlider = document.getElementById('slider-timeline');
+      tSlider.max = String(Math.max(10, sim.heatDeathGyr));
+      tSlider.value = String(Math.min(sim.timeGyr, sim.heatDeathGyr));
+
+      // Scale buttons highlight
+      document.querySelectorAll('[data-scale-idx]').forEach(btn => {
+        const idx = parseInt(btn.getAttribute('data-scale-idx'), 10);
+        if (idx === sim.focus.scaleIndex) {
+          btn.className = 'px-2 py-1 rounded text-xs font-semibold bg-sky-500 text-slate-950';
+        } else {
+          btn.className = 'px-2 py-1 rounded text-xs text-slate-300 hover:bg-slate-800';
+        }
+      });
+
+      // Hand tool highlight
+      document.querySelectorAll('[data-hand-tool]').forEach(btn => {
+        const t = btn.getAttribute('data-hand-tool');
+        btn.className = (t === this.handTool && sim.mode === 'meddling')
+          ? 'px-2 py-1 rounded text-xs font-semibold bg-amber-400 text-slate-950'
+          : 'px-2 py-1 rounded text-xs bg-slate-800 text-slate-300 hover:bg-slate-700';
+      });
+
+      // Tab buttons highlight
+      document.querySelectorAll('[data-panel-tab]').forEach(btn => {
+        const tab = btn.getAttribute('data-panel-tab');
+        btn.className = tab === this.activeTab
+          ? 'px-2.5 py-1.5 text-xs font-semibold border-b-2 border-amber-400 text-amber-300'
+          : 'px-2.5 py-1.5 text-xs text-slate-400 hover:text-slate-200';
+      });
+
+      this._renderRightPanel(obs);
+    }
+
+    _renderRightPanel(obs) {
+      const container = document.getElementById('panel-content');
+      if (!container) return;
+      const sim = this.sim;
+      const f = obs.filament;
+      const g = obs.galaxy;
+      const s = obs.star;
+      const p = obs.planet;
+      const cr = obs.creature;
+
+      if (this.activeTab === 'inspector') {
+        const civ = p && p.civilization;
+        container.innerHTML = `
+          <div class="space-y-3 text-xs">
+            <div class="p-2.5 rounded bg-slate-900/90 border border-slate-800">
+              <div class="text-amber-300 font-semibold mb-1">Cosmic Hierarchy & Focus</div>
+              <div class="grid grid-cols-2 gap-1 text-slate-300">
+                <div>Seed: <span class="text-white font-mono">${sim.seedString}</span></div>
+                <div>Hash: <span class="text-sky-400 font-mono">${sim.getStateHash()}</span></div>
+                <div>Filament: <span class="text-white">${f ? f.name : '-'}</span></div>
+                <div>Galaxy: <span class="text-white">${g ? g.name : '-'}</span></div>
+                <div>Star: <span class="text-white">${s ? s.name : '-'}</span></div>
+                <div>Planet: <span class="text-emerald-300">${p ? p.name : '-'}</span></div>
+              </div>
+            </div>
+
+            <div class="p-2.5 rounded bg-slate-900/90 border border-slate-800">
+              <div class="text-sky-300 font-semibold mb-1">Universe Census (LOD Aggregate)</div>
+              <div class="grid grid-cols-2 gap-1.5 text-slate-300">
+                <div>Active Stars: <b class="text-white">${sim.stats.activeStarsCount}</b></div>
+                <div>Habitable Worlds: <b class="text-emerald-300">${sim.stats.habitableWorldsCount}</b></div>
+                <div>Living Biospheres: <b class="text-emerald-400">${sim.stats.livingWorldsCount}</b></div>
+                <div>Civilizations: <b class="text-amber-300">${sim.stats.civilizationsCount}</b></div>
+                <div>Total Biomass: <b class="text-white">${sim.stats.totalBiomass.toFixed(1)}</b></div>
+                <div>Dyson Coverage: <b class="text-cyan-300">${s ? (s.dysonCompletion * 100).toFixed(0) : 0}%</b></div>
+              </div>
+            </div>
+
+            ${p ? `
+            <div class="p-2.5 rounded bg-slate-900/90 border border-slate-800">
+              <div class="text-emerald-300 font-semibold mb-1">Focused World: ${p.name} (${p.type})</div>
+              <div class="space-y-1 text-slate-300">
+                <div>Orbit: <b>${p.orbitAU} AU</b> (${p.inHabitableZone ? '<span class="text-emerald-400">In Habitable Zone</span>' : 'Outside HZ'})</div>
+                <div>Surface Temp: <b>${p.surfaceTempK.toFixed(0)} K</b> | Ocean: <b>${(p.oceanCoverage * 100).toFixed(0)}%</b> | Plates: <b>${p.plates.length}</b></div>
+                <div>Chemistry: Monomers <b>${(p.chemistry.monomers * 100).toFixed(0)}%</b> → Polymers <b>${(p.chemistry.polymers * 100).toFixed(0)}%</b> → Autocatalysis <b>${(p.chemistry.autocatalysisIndex * 100).toFixed(0)}%</b></div>
+                <div>Biosphere: <b>${p.biosphere.active ? `Active (${p.biosphere.biodiversity} species, ${p.biosphere.multicellular ? 'Multicellular' : 'Unicellular'})` : 'Sterile / Prebiotic'}</b></div>
+              </div>
+            </div>` : ''}
+
+            <div class="p-2.5 rounded bg-slate-900/90 border border-slate-800">
+              <div class="text-purple-300 font-semibold mb-1">Civilization & Religion (Belief View of You)</div>
+              ${civ ? `
+                <div class="space-y-1 text-slate-300">
+                  <div><b>${civ.name}</b> — Tech Level <b>${civ.techLevel.toFixed(1)} / 9.9</b> (${civ.settlements} settlements)</div>
+                  <div>Culture: <span class="text-sky-300">${civ.cultureTrait}</span> | Style: <span>${civ.architectureStyle}</span></div>
+                  <div>Deity Title: <b class="text-amber-300">"${civ.religion.deityTitle}"</b></div>
+                  <div>Religious Stance: <b class="text-white">${civ.religion.stance}</b> (Belief: ${(civ.religion.beliefStrength * 100).toFixed(0)}%)</div>
+                  <div>Witnessed Deeds: <span class="text-emerald-400">${civ.religion.kindActsWitnessed} Kind</span> vs <span class="text-rose-400">${civ.religion.cruelActsWitnessed} Cruel</span></div>
+                  ${civ.noticedGod ? `<div class="mt-1.5 p-1.5 rounded bg-sky-950/70 border border-sky-500/40 text-sky-200 italic">${civ.messagesToGod[civ.messagesToGod.length - 1].message}</div>` : ''}
+                </div>
+              ` : `<div class="text-slate-400">No civilization on ${p ? p.name : 'this world'} yet. Fast-forward evolution or cast <b>Inspire</b>.</div>`}
+            </div>
+          </div>
+        `;
+      } else if (this.activeTab === 'hr') {
+        const stars = g ? g.stars : [];
+        const pointsHtml = stars.map(st => {
+          // H-R diagram: left is hot (30,000K), right is cool (3,000K); bottom is dim, top is bright
+          const xPct = Math.max(6, Math.min(94, (1 - (Math.log10(st.temperatureK) - 3.45) / 1.2) * 100));
+          const yPct = Math.max(8, Math.min(92, (1 - (Math.log10(Math.max(1e-4, st.luminositySolar)) + 4) / 9) * 100));
+          const col = st.phase === 'RedGiant' ? '#fb7185' : (st.phase === 'WhiteDwarf' ? '#93c5fd' : '#fde047');
+          return `<div title="${st.name} (${st.phase})" style="left:${xPct}%;top:${yPct}%;background:${col}" class="absolute w-3 h-3 -ml-1.5 -mt-1.5 rounded-full border border-white shadow"></div>`;
+        }).join('');
+
+        container.innerHTML = `
+          <div class="space-y-3 text-xs">
+            <div class="font-semibold text-amber-300">Live Hertzsprung–Russell Diagram (${g ? g.name : 'Sector'})</div>
+            <div class="relative h-52 bg-slate-950 rounded border border-slate-800 overflow-hidden">
+              <div class="absolute top-1 left-2 text-[10px] text-sky-400">Hot O/B ← Temperature (K) → Cool M</div>
+              <div class="absolute bottom-1 right-2 text-[10px] text-slate-500">Main Sequence & Remnants</div>
+              ${pointsHtml}
+            </div>
+            <div class="space-y-1 max-h-48 overflow-y-auto">
+              ${stars.map(st => `
+                <div class="flex justify-between items-center p-1.5 rounded bg-slate-900 border border-slate-800">
+                  <span><b>${st.name}</b> (${st.phase})</span>
+                  <span class="font-mono text-slate-300">${st.massSolar.toFixed(2)}M☉ | ${st.temperatureK.toFixed(0)}K | Z=${st.metallicityZ.toFixed(3)}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      } else if (this.activeTab === 'phylo') {
+        const tree = p ? p.biosphere.phyloTree : [];
+        container.innerHTML = `
+          <div class="space-y-3 text-xs">
+            <div class="font-semibold text-emerald-300">Artificial Chemistry & Living Phylogenetic Tree (${p ? p.name : ''})</div>
+            <div class="p-2 rounded bg-slate-900 border border-slate-800 space-y-1">
+              <div>Ribozyme Catalysts: <b>${p ? p.chemistry.ribozymeCount : 0}</b> | Self-Replicating: <b>${p && p.chemistry.selfReplicating ? 'YES' : 'No'}</b></div>
+              <div>Mass Extinctions Survived: <b>${p ? p.biosphere.massExtinctions : 0}</b></div>
+            </div>
+            <div class="space-y-1.5 max-h-72 overflow-y-auto">
+              ${tree.length === 0 ? '<div class="text-slate-400">No self-replicating clades yet. Cast <b>Seed Protocell</b> or wait for tidal-pool autocatalysis.</div>' :
+                tree.map(node => `
+                  <div class="p-2 rounded border ${node.extinct ? 'bg-slate-950/60 border-rose-900/40 text-slate-500' : 'bg-slate-900 border-emerald-500/30 text-slate-200'}">
+                    <div class="flex justify-between">
+                      <b>#${node.id} ${node.name} ${node.extinct ? '(EXTINCT)' : ''}</b>
+                      <span class="font-mono text-[11px] text-emerald-400">Int: ${node.intelligence}</span>
+                    </div>
+                    <div class="text-[11px] text-slate-400">Parent: ${node.parentId || 'LUCA'} | ${node.trophicLevel} | Genome: <code class="text-sky-300">${node.genome}</code></div>
+                  </div>
+                `).join('')
+              }
+            </div>
+          </div>
+        `;
+      } else if (this.activeTab === 'creature') {
+        const probs = cr.getActionProbabilities(cr.lastContext);
+        container.innerHTML = `
+          <div class="space-y-3 text-xs">
+            <div class="p-2.5 rounded bg-slate-900 border border-slate-800">
+              <div class="flex justify-between items-center mb-1">
+                <span class="font-semibold text-amber-300">${cr.name} (${cr.speciesArchetype})</span>
+                <span class="font-mono">Alignment: <b>${cr.alignment.toFixed(2)}</b></span>
+              </div>
+              <div class="text-slate-300 mb-2">Last Action in <b>${cr.lastContext}</b>: <span class="text-sky-300 font-mono">${cr.lastAction}</span></div>
+              <div class="flex gap-2">
+                <button id="btn-reward-creature" class="flex-1 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold">✨ Stroke / Reward (+1)</button>
+                <button id="btn-punish-creature" class="flex-1 py-1.5 rounded bg-rose-600 hover:bg-rose-500 text-white font-semibold">⚡ Slap / Punish (-1)</button>
+              </div>
+            </div>
+
+            <div class="p-2.5 rounded bg-slate-900 border border-slate-800">
+              <div class="font-semibold text-sky-300 mb-1">Internal Drives & Reinforcement Totals</div>
+              <div class="grid grid-cols-2 gap-1 text-slate-300">
+                <div>Hunger: <b>${(cr.drives.hunger * 100).toFixed(0)}%</b></div>
+                <div>Curiosity: <b>${(cr.drives.curiosity * 100).toFixed(0)}%</b></div>
+                <div>Play: <b>${(cr.drives.play * 100).toFixed(0)}%</b></div>
+                <div>Fear: <b>${(cr.drives.fear * 100).toFixed(0)}%</b></div>
+                <div>Rewards: <b class="text-emerald-400">${cr.totalRewards}</b></div>
+                <div>Punishments: <b class="text-rose-400">${cr.totalPunishments}</b></div>
+              </div>
+            </div>
+
+            <div class="p-2.5 rounded bg-slate-900 border border-slate-800">
+              <div class="font-semibold text-purple-300 mb-1.5">Learned Policy Probabilities (Q-Table + Neural MLP)</div>
+              <div class="space-y-1">
+                ${CREATURE_ACTIONS.map(act => {
+                  const pct = (probs[act] * 100).toFixed(1);
+                  const good = ACTION_VALENCE[act] > 0;
+                  return `
+                    <div>
+                      <div class="flex justify-between text-[11px]">
+                        <span class="${good ? 'text-emerald-300' : 'text-rose-300'}">${act}</span>
+                        <span class="font-mono">${pct}% (Q=${cr.qTable[cr.lastContext][act].toFixed(2)})</span>
+                      </div>
+                      <div class="w-full h-1.5 bg-slate-800 rounded overflow-hidden">
+                        <div style="width:${Math.min(100, pct)}%" class="h-full ${good ? 'bg-emerald-500' : 'bg-rose-500'}"></div>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+        const rBtn = document.getElementById('btn-reward-creature');
+        const pBtn = document.getElementById('btn-punish-creature');
+        if (rBtn) rBtn.addEventListener('click', () => {
+          this.sim.interactHand('stroke_creature');
+          this.audio.playMiracleChime(true);
+          this.updateAllUI(true);
+        });
+        if (pBtn) pBtn.addEventListener('click', () => {
+          this.sim.interactHand('slap_creature');
+          this.audio.playMiracleChime(false);
+          this.updateAllUI(true);
+        });
+      } else if (this.activeTab === 'branches') {
+        const comp = sim.branches.length > 0 ? sim.compareWithBranch(sim.branches.length - 1, sim.timeGyr) : null;
+        container.innerHTML = `
+          <div class="space-y-3 text-xs">
+            <div class="font-semibold text-amber-300">Timeline Branching ("What If I Hadn't Done That?")</div>
+            <p class="text-slate-400">Fork a timeline before or after an intervention, scrub or meddle differently, and compare branches side-by-side at the exact same cosmic timestamp.</p>
+            ${comp ? `
+              <table class="w-full text-left border-collapse border border-slate-800 text-[11px]">
+                <thead>
+                  <tr class="bg-slate-900 text-slate-300">
+                    <th class="p-1.5 border border-slate-800">Metric @ ${sim.timeGyr.toFixed(2)} Gyr</th>
+                    <th class="p-1.5 border border-slate-800 text-amber-300">Current Timeline</th>
+                    <th class="p-1.5 border border-slate-800 text-sky-300">${comp.branchName}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td class="p-1.5 border border-slate-800">State Hash</td><td class="p-1.5 border border-slate-800 font-mono">${comp.current.hash}</td><td class="p-1.5 border border-slate-800 font-mono">${comp.branch.hash}</td></tr>
+                  <tr><td class="p-1.5 border border-slate-800">Heat Death Horizon</td><td class="p-1.5 border border-slate-800">${comp.current.heatDeathGyr} Gyr</td><td class="p-1.5 border border-slate-800">${comp.branch.heatDeathGyr} Gyr</td></tr>
+                  <tr><td class="p-1.5 border border-slate-800">God Alignment</td><td class="p-1.5 border border-slate-800">${comp.current.alignment}</td><td class="p-1.5 border border-slate-800">${comp.branch.alignment}</td></tr>
+                  <tr><td class="p-1.5 border border-slate-800">Living Worlds</td><td class="p-1.5 border border-slate-800">${comp.current.livingWorlds}</td><td class="p-1.5 border border-slate-800">${comp.branch.livingWorlds}</td></tr>
+                  <tr><td class="p-1.5 border border-slate-800">Civilizations</td><td class="p-1.5 border border-slate-800">${comp.current.civilizations}</td><td class="p-1.5 border border-slate-800">${comp.branch.civilizations}</td></tr>
+                  <tr><td class="p-1.5 border border-slate-800">Focused Civ Tech</td><td class="p-1.5 border border-slate-800">${comp.current.focusedCivTech}</td><td class="p-1.5 border border-slate-800">${comp.branch.focusedCivTech}</td></tr>
+                  <tr><td class="p-1.5 border border-slate-800">Creature Alignment</td><td class="p-1.5 border border-slate-800">${comp.current.creatureAlignment}</td><td class="p-1.5 border border-slate-800">${comp.branch.creatureAlignment}</td></tr>
+                </tbody>
+              </table>
+            ` : '<div class="p-3 rounded bg-slate-900 text-slate-400">No branches forked yet. Click <b>Fork Timeline</b> on the bottom bar to snapshot a branch.</div>'}
+          </div>
+        `;
+      } else if (this.activeTab === 'chronicle') {
+        const entries = sim.chronicle.slice().reverse();
+        container.innerHTML = `
+          <div class="space-y-2 text-xs">
+            <div class="font-semibold text-amber-300">Cosmic Chronicle (${sim.chronicle.length} recorded events)</div>
+            <div class="space-y-1.5 max-h-80 overflow-y-auto pr-1">
+              ${entries.map(e => `
+                <div class="p-2 rounded bg-slate-900 border border-slate-800">
+                  <span class="font-mono text-sky-400">[${e.timeGyr.toFixed(2)} Gyr]</span>
+                  <span class="text-slate-200 ml-1">${e.text}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      } else if (this.activeTab === 'howitworks') {
+        container.innerHTML = `
+          <div class="space-y-2.5 text-xs text-slate-300 leading-relaxed max-h-96 overflow-y-auto pr-1">
+            <div class="font-semibold text-amber-300">How This Works — Honest Physics vs. Approximations</div>
+            <div class="p-2 rounded bg-slate-900 border border-slate-800">
+              <b class="text-sky-300">1. Determinism & LOD Architecture (Exact):</b>
+              Pure Mulberry32/FNV-1a hierarchical seeding (<code class="text-amber-200">universe → filament → galaxy → star → planet → biosphere</code>). Rewinding replays deterministically from <code class="text-amber-200">(seed, constants, actionLog)</code> in 0.1 Gyr fixed quanta. Parent aggregates are mathematically reconciled with child collections.
+            </div>
+            <div class="p-2 rounded bg-slate-900 border border-slate-800">
+              <b class="text-sky-300">2. Cosmic Web & Galaxies (Hybrid GPU N-Body + Analytical):</b>
+              WebGL2 ping-pong float FBO steps a 2D particle-mesh gravitational + Hubble drag field for visual particles, while halo mass, merger rates, and star-formation history follow analytical Press–Schechter / Kennicutt–Schmidt approximations.
+            </div>
+            <div class="p-2 rounded bg-slate-900 border border-slate-800">
+              <b class="text-sky-300">3. Stars & Nucleosynthesis (Parametric Scaling):</b>
+              Salpeter-inspired initial mass distribution; main-sequence lifetime scales as $M^{-2.1}$, luminosity as $M^{3.5}$, and effective temperature as $M^{0.505}$. Massive stars ($M \ge 8 M_\odot$) trigger core-collapse supernovae that enrich galactic metallicity $Z$, unlocking rocky planet condensation.
+            </div>
+            <div class="p-2 rounded bg-slate-900 border border-slate-800">
+              <b class="text-sky-300">4. Planets, Chemistry & Evolution (Stylised Dynamical Toy):</b>
+              Voronoi spherical plate cells + equilibrium blackbody temperature. Prebiotic chemistry integrates a 3-stage reaction cascade (monomers → polymers → autocatalytic ribozymes) that crosses self-replication only when $Z$ and <code class="text-amber-200">chemistryRichness</code> suffice. Evolution mutates bitstring genomes along an explicit phylogenetic tree.
+            </div>
+            <div class="p-2 rounded bg-slate-900 border border-slate-800">
+              <b class="text-sky-300">5. Creature Learning & Gesture Miracles (Real In-Browser ML):</b>
+              Gesture recognition uses a 32-point resampled $1/Protractor template matcher across 10 shapes. The Creature combines a tabular Q-learning matrix with a 2-layer tanh neural network updated live from your strokes/slaps and miracle imitation.
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    _startLoop() {
+      const tick = (now) => {
+        const dtSec = Math.min(0.1, (now - this.lastFrameTime) / 1000);
+        this.lastFrameTime = now;
+
+        if (this.playing) {
+          const dtGyr = dtSec * this.simSpeedGyrPerSec;
+          if (this.sim.timeGyr < this.sim.heatDeathGyr) {
+            this.sim.step(dtGyr);
+          } else {
+            this.playing = false;
+          }
+          this.updateAllUI(false);
+        }
+
+        this.audio.updateFromSimulation(this.sim);
+        this.renderer.render(this.sim, now / 1000);
+        this._rafId = requestAnimationFrame(tick);
+      };
+      this._rafId = requestAnimationFrame(tick);
+    }
+  }
+
+  window.addEventListener('load', () => {
+    window.stellaApp = new StellaMaximaApp();
+  });
+})();
+
+  </script>
+</body>
+</html>
